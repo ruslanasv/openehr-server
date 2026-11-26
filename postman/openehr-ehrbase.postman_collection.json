@@ -232,11 +232,11 @@
               }
             ],
             "url": "{{base}}/rest/openehr/v1/definition/template/adl1.4",
-            "description": "Uploads `requests/templates/ckm/medication_order.opt`. In the Postman app, set Settings > General > Working directory to the repo root (or re-select the file in the Body tab).",
+            "description": "Uploads `src/main/resources/templates/medication_order.opt`. In the Postman app, set Settings > General > Working directory to the repo root (or re-select the file in the Body tab).",
             "body": {
               "mode": "file",
               "file": {
-                "src": "requests/templates/ckm/medication_order.opt"
+                "src": "src/main/resources/templates/medication_order.opt"
               }
             }
           },
@@ -264,11 +264,11 @@
               }
             ],
             "url": "{{base}}/rest/openehr/v1/definition/template/adl1.4",
-            "description": "Uploads `requests/templates/minimal_diagnosis.opt`. In the Postman app, set Settings > General > Working directory to the repo root (or re-select the file in the Body tab).",
+            "description": "Uploads `src/main/resources/templates/minimal_diagnosis.opt`. In the Postman app, set Settings > General > Working directory to the repo root (or re-select the file in the Body tab).",
             "body": {
               "mode": "file",
               "file": {
-                "src": "requests/templates/minimal_diagnosis.opt"
+                "src": "src/main/resources/templates/minimal_diagnosis.opt"
               }
             }
           },
@@ -296,11 +296,11 @@
               }
             ],
             "url": "{{base}}/rest/openehr/v1/definition/template/adl1.4",
-            "description": "Uploads `requests/templates/minimal_vital_signs.opt`. In the Postman app, set Settings > General > Working directory to the repo root (or re-select the file in the Body tab).",
+            "description": "Uploads `src/main/resources/templates/minimal_vital_signs.opt`. In the Postman app, set Settings > General > Working directory to the repo root (or re-select the file in the Body tab).",
             "body": {
               "mode": "file",
               "file": {
-                "src": "requests/templates/minimal_vital_signs.opt"
+                "src": "src/main/resources/templates/minimal_vital_signs.opt"
               }
             }
           },

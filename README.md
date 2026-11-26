@@ -44,18 +44,52 @@ checks versions, runs AQL queries and prints response times. Results: `docs/medi
 On Windows it needs Git Bash (part of Git for Windows); plain `bash` in PowerShell starts WSL instead.
 To use Git Bash in the IntelliJ terminal: Settings > Tools > Terminal > Shell path = `C:\Program Files\Git\bin\bash.exe`.
 
-## Test data generator (first version)
+## Java / Maven project: test data generator
 
-`scripts/DataGenerator.java` creates N EHRs with M random compositions each (diagnoses from an ICD-10 list,
-vital signs with realistic distributions, medication orders from an ATC list), times within the last year.
-Single-file Java (JDK 17+, no build, no dependencies); works from PowerShell and Git Bash, run from the repo root:
+The repo is a Maven project (Java 21). `./mvnw` (Windows: `mvnw.cmd`) downloads Maven 3.10.2 on first use,
+so the locally installed Maven version does not matter. Open the folder in IntelliJ as a Maven project.
 
-    java scripts/DataGenerator.java --ehrs 100 --compositions 5 --threads 8 --seed 42
-    java scripts/DataGenerator.java --help
+    ./mvnw test                     # unit tests, no server needed
+    ./mvnw package                  # tests + runnable jar target/data-generator.jar
+    java -jar target/data-generator.jar --ehrs 100 --compositions 5 --threads 8 --seed 42
+    java -jar target/data-generator.jar --help
+    ./mvnw compile exec:java -Dexec.args="--ehrs 10"      # run without packaging
+
+The generator creates N EHRs with M random compositions each, using the
+[openEHR SDK](https://github.com/ehrbase/openEHR_SDK) 2.36.0 (same version as the server):
+
+- **Entity classes generated from the templates** by the SDK `generator-maven-plugin` during the build
+  (`src/main/resources/templates/*.opt` → `target/generated-sources/ehrbase-generator`, package
+  `io.github.ruslanasv.openehr.model`), e.g. `MinimalDiagnosisV0Composition`, `BloodPressureObservation`,
+  `SeverityDefiningCode` (enum). They are not committed; IntelliJ picks them up after a Maven reload/build.
+- **Templates**: `minimal_diagnosis.opt` and `minimal_vital_signs.opt` are hand-written; `medication_order.opt` comes from
+  [ehrbase/performance-test](https://github.com/ehrbase/performance-test) (Apache-2.0, CKM archetypes) with one local change:
+  the medication item is `DV_CODED_TEXT` bound to ATC (upstream: free `DV_TEXT`), so orders always carry an ATC code.
+- **Factories** (`src/main/java/io/github/ruslanasv/openehr/generator`) fill the entities with random data –
+  ICD-10 diagnoses, vital signs with realistic distributions, ATC medication orders – and convert them to RM
+  compositions (`GeneratedDtoToRmConverter`).
+- **SDK REST client** (`DefaultRestClient`) uploads missing templates (`ensureExistence`), creates EHRs and posts
+  compositions; basic auth and the connection pool are set up in `EhrbaseClients`.
+- **Unit tests** validate generated compositions against their templates with the SDK `LocatableValidator`,
+  check reproducibility (same seed → same composition) and that medication items carry ATC codes.
 
 Patients get subject ids `GEN-<run>-0001…` in namespace `generated` (separate from hand-made test data);
 the same `--seed` produces the same data. Prints throughput and latency per operation.
-New templates: add a generator method and an entry in `TEMPLATE_FILES`.
+
+Adding a template: put the `.opt` into `src/main/resources/templates`, list it in the `generator-maven-plugin`
+configuration (`pom.xml`) and in `ClasspathTemplateProvider`, write a `CompositionFactory` for the generated
+entity class and register it in `CompositionFactories`.
+
+## Project layout
+
+    docker-compose*.yml, .env.ehrbase, nginx/   EHRbase + PostgreSQL (+ load balancer)
+    pom.xml, mvnw, src/main/java                data generator (openEHR SDK)
+    src/main/resources/templates                operational templates (.opt), used by all tools below
+    src/test/java                               unit tests
+    requests/                                   IntelliJ HTTP client requests + sample FLAT compositions
+    postman/                                    Postman collection / newman
+    scripts/medication-scenario.sh              curl-based scenario with versions, AQL and timings
+    docs/                                       curl examples, scenario results
 
 ## API request examples
 
@@ -65,4 +99,4 @@ New templates: add a generator method and an entry in `TEMPLATE_FILES`.
 ## IntelliJ HTTP client
 
 IntelliJ: open requests/openehr.http, choose environment `local`, run requests.
-Templates are in requests/templates/, sample FLAT compositions in requests/compositions/.
+Templates are in src/main/resources/templates/, sample FLAT compositions in requests/compositions/.

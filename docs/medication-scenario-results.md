@@ -11,7 +11,7 @@ Script: `scripts/medication-scenario.sh [runs]` (re-runnable; reuses template an
 
 ## 1. Template
 
-`requests/templates/ckm/medication_order.opt` – template `medication_order` from the public
+`src/main/resources/templates/medication_order.opt` – template `medication_order` (since 2026-11-26 locally modified: medication item constrained to DV_CODED_TEXT with terminology ATC) from the public
 [ehrbase/performance-test](https://github.com/ehrbase/performance-test) repository, built on CKM archetypes
 `COMPOSITION.encounter.v1`, `INSTRUCTION.medication_order.v3`, `CLUSTER.medication.v1`.
 Uploaded via `POST /definition/template/adl1.4` → 201 (409 on repeat upload).

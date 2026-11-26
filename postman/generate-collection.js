@@ -102,9 +102,9 @@ const collection = {
       req('Get EHR_STATUS', 'GET', `${API}/ehr/{{ehr_id}}/ehr_status`, { headers: [J], test: [status(200)] }),
     ] },
     { name: '2 Templates', item: [
-      uploadOpt('medication_order (CKM)', 'requests/templates/ckm/medication_order.opt'),
-      uploadOpt('minimal_diagnosis', 'requests/templates/minimal_diagnosis.opt'),
-      uploadOpt('minimal_vital_signs', 'requests/templates/minimal_vital_signs.opt'),
+      uploadOpt('medication_order (CKM)', 'src/main/resources/templates/medication_order.opt'),
+      uploadOpt('minimal_diagnosis', 'src/main/resources/templates/minimal_diagnosis.opt'),
+      uploadOpt('minimal_vital_signs', 'src/main/resources/templates/minimal_vital_signs.opt'),
       req('List templates', 'GET', `${API}/definition/template/adl1.4`, { headers: [J], test: [status(200),
         `pm.test("medication_order present", () => pm.expect(pm.response.json().map(t => t.template_id)).to.include("medication_order"));`] }),
       req('Get web template (all FLAT paths)', 'GET', `${API}/definition/template/adl1.4/medication_order`, {

@@ -21,7 +21,7 @@ RUNS=${1:-10}
 API=$BASE/rest/openehr/v1
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 COMP=$ROOT/requests/compositions
-TEMPLATE=$ROOT/requests/templates/ckm/medication_order.opt
+TEMPLATE=$ROOT/src/main/resources/templates/medication_order.opt
 TEMPLATE_ID=medication_order
 NS=patients
 

@@ -55,7 +55,7 @@ Upload (201 created, 409 if it already exists), list, web template (all FLAT pat
 
 ```bash
 c -X POST "$BASE/definition/template/adl1.4" -H 'Content-Type: application/xml' \
-  --data-binary @requests/templates/ckm/medication_order.opt -o /dev/null -w 'upload: HTTP %{http_code}'
+  --data-binary @src/main/resources/templates/medication_order.opt -o /dev/null -w 'upload: HTTP %{http_code}'
 c -H 'Accept: application/json' "$BASE/definition/template/adl1.4"
 c -H 'Accept: application/openehr.wt+json' "$BASE/definition/template/adl1.4/medication_order" | head -c 300
 c -H 'Accept: application/json' "$BASE/definition/template/adl1.4/medication_order/example?format=FLAT" | head -20

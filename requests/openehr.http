@@ -24,14 +24,14 @@ POST {{base}}/rest/openehr/v1/definition/template/adl1.4
 Authorization: Basic {{user}} {{password}}
 Content-Type: application/xml
 
-< ./templates/minimal_diagnosis.opt
+< ../src/main/resources/templates/minimal_diagnosis.opt
 
 ### Upload template: minimal vital signs
 POST {{base}}/rest/openehr/v1/definition/template/adl1.4
 Authorization: Basic {{user}} {{password}}
 Content-Type: application/xml
 
-< ./templates/minimal_vital_signs.opt
+< ../src/main/resources/templates/minimal_vital_signs.opt
 
 ### List templates
 GET {{base}}/rest/openehr/v1/definition/template/adl1.4
@@ -126,7 +126,7 @@ POST {{base}}/rest/openehr/v1/definition/template/adl1.4
 Authorization: Basic {{user}} {{password}}
 Content-Type: application/xml
 
-< ./templates/ckm/medication_order.opt
+< ../src/main/resources/templates/medication_order.opt
 
 ### Post medication order: metformin
 POST {{base}}/rest/openehr/v1/ehr/{{ehr_id}}/composition?templateId=medication_order&format=FLAT
