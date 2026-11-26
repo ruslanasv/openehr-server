@@ -1,0 +1,33 @@
+# Scaled setup: N EHRbase instances + 1 PostgreSQL behind an nginx load balancer.
+# Layered on top of docker-compose.yml:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.scale.yml up -d
+#   docker compose -f docker-compose.yml -f docker-compose.scale.yml up -d --scale ehrbase=3   # change count
+#
+# Clients keep using http://localhost:8080/ehrbase - nginx spreads requests over the instances.
+# Response header X-Upstream shows which instance served the request.
+
+services:
+  ehrbase:
+    container_name: !reset null   # replicas cannot share a fixed name
+    ports: !reset []              # only the load balancer is published
+    deploy:
+      replicas: 2
+    healthcheck:
+      # Alpine image: only busybox wget. /rest/status needs auth and also queries the DB.
+      test: ["CMD-SHELL", "wget -qO /dev/null \"http://$${SECURITY_AUTHUSER}:$${SECURITY_AUTHPASSWORD}@127.0.0.1:8080/ehrbase/rest/status\""]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  lb:
+    image: nginx:1.29-alpine
+    container_name: ehrbase-lb
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/ehrbase-lb.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      ehrbase:
+        condition: service_healthy

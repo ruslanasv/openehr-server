@@ -1,0 +1,26 @@
+{
+  "ctx/language": "en",
+  "ctx/territory": "LT",
+  "ctx/composer_name": "Nurse Ona Onaitė",
+  "ctx/health_care_facility|name": "Vilnius Clinic",
+  "ctx/time": "2026-11-26T09:45:00",
+  "ctx/setting|code": "228",
+
+  "vital_signs/blood_pressure/any_event:0/time": "2026-11-26T09:45:00",
+  "vital_signs/blood_pressure/any_event:0/systolic|magnitude": 152,
+  "vital_signs/blood_pressure/any_event:0/systolic|unit": "mm[Hg]",
+  "vital_signs/blood_pressure/any_event:0/diastolic|magnitude": 96,
+  "vital_signs/blood_pressure/any_event:0/diastolic|unit": "mm[Hg]",
+
+  "vital_signs/pulse_heart_beat/any_event:0/time": "2026-11-26T09:45:00",
+  "vital_signs/pulse_heart_beat/any_event:0/rate|magnitude": 78,
+  "vital_signs/pulse_heart_beat/any_event:0/rate|unit": "/min",
+
+  "vital_signs/body_temperature/any_event:0/time": "2026-11-26T09:45:00",
+  "vital_signs/body_temperature/any_event:0/temperature|magnitude": 36.7,
+  "vital_signs/body_temperature/any_event:0/temperature|unit": "Cel",
+
+  "vital_signs/body_weight/any_event:0/time": "2026-11-26T09:45:00",
+  "vital_signs/body_weight/any_event:0/weight|magnitude": 84.5,
+  "vital_signs/body_weight/any_event:0/weight|unit": "kg"
+}
