@@ -33,5 +33,18 @@ Notes:
 - API auth:   ehrbase-user / SuperSecretPassword (admin: ehrbase-admin / EvenMoreSecretPassword)
 - Postgres:   localhost:5432, db `ehrbase`, user postgres/postgres (or ehrbase/ehrbase)
 
+## Medication order scenario script
+
+Uploads the CKM medication_order template, creates patients, writes/reads/updates compositions,
+checks versions, runs AQL queries and prints response times. Results: `docs/medication-scenario-results.md`.
+
+    scripts/medication-scenario.sh 10                                           # Git Bash
+    & "C:\Program Files\Git\bin\bash.exe" scripts/medication-scenario.sh 10     # PowerShell
+
+On Windows it needs Git Bash (part of Git for Windows); plain `bash` in PowerShell starts WSL instead.
+To use Git Bash in the IntelliJ terminal: Settings > Tools > Terminal > Shell path = `C:\Program Files\Git\bin\bash.exe`.
+
+## IntelliJ HTTP client
+
 IntelliJ: open requests/openehr.http, choose environment `local`, run requests.
 Templates are in requests/templates/, sample FLAT compositions in requests/compositions/.

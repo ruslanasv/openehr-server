@@ -116,3 +116,40 @@ Accept: application/json
   "q": "SELECT bp/data[at0001]/events[at0006]/time/value AS time, bp/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude AS systolic, bp/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude AS diastolic, p/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude AS pulse, t/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude AS temp, w/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude AS weight FROM EHR e[ehr_id/value=$ehr_id] CONTAINS COMPOSITION c[openEHR-EHR-COMPOSITION.encounter.v1] CONTAINS (OBSERVATION bp[openEHR-EHR-OBSERVATION.blood_pressure.v2] AND OBSERVATION p[openEHR-EHR-OBSERVATION.pulse.v2] AND OBSERVATION t[openEHR-EHR-OBSERVATION.body_temperature.v2] AND OBSERVATION w[openEHR-EHR-OBSERVATION.body_weight.v2])",
   "query_parameters": { "ehr_id": "{{ehr_id}}" }
 }
+
+
+#######################  MEDICATION ORDER (CKM)  #######################
+# Full scenario incl. versions and timings: scripts/medication-scenario.sh
+
+### Upload template: medication_order (CKM INSTRUCTION.medication_order.v3)
+POST {{base}}/rest/openehr/v1/definition/template/adl1.4
+Authorization: Basic {{user}} {{password}}
+Content-Type: application/xml
+
+< ./templates/ckm/medication_order.opt
+
+### Post medication order: metformin
+POST {{base}}/rest/openehr/v1/ehr/{{ehr_id}}/composition?templateId=medication_order&format=FLAT
+Authorization: Basic {{user}} {{password}}
+Content-Type: application/json
+Prefer: return=minimal
+
+< ./compositions/medication_order_metformin.flat.json
+
+> {% client.global.set("med_uid", response.headers.valueOf("ETag").replace(/"/g, "").split("::")[0]); %}
+
+### Revision history of the medication order
+GET {{base}}/rest/openehr/v1/ehr/{{ehr_id}}/versioned_composition/{{med_uid}}/revision_history
+Authorization: Basic {{user}} {{password}}
+Accept: application/json
+
+### AQL: patients with metformin (ATC A10BA02)
+POST {{base}}/rest/openehr/v1/query/aql
+Authorization: Basic {{user}} {{password}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "q": "SELECT e/ehr_id/value AS ehr_id, e/ehr_status/subject/external_ref/id/value AS patient, m/activities[at0001]/description[at0002]/items[at0070]/value/value AS medication FROM EHR e CONTAINS COMPOSITION c CONTAINS INSTRUCTION m[openEHR-EHR-INSTRUCTION.medication_order.v3] WHERE m/activities[at0001]/description[at0002]/items[at0070]/value/defining_code/code_string = $atc",
+  "query_parameters": { "atc": "A10BA02" }
+}

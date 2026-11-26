@@ -1,0 +1,22 @@
+{
+  "ctx/language": "en",
+  "ctx/territory": "LT",
+  "ctx/composer_name": "Dr. Jonas Jonaitis",
+  "ctx/health_care_facility|name": "Vilnius Clinic",
+  "ctx/time": "2026-11-26T10:10:00",
+  "ctx/setting|code": "228",
+
+  "medication_order/medication_order/order:0/medication_item|value": "Lisinopril 10 mg tablet",
+  "medication_order/medication_order/order:0/medication_item|code": "C09AA03",
+  "medication_order/medication_order/order:0/medication_item|terminology": "ATC",
+  "medication_order/medication_order/order:0/medication/form:0": "Tablet",
+  "medication_order/medication_order/order:0/medication/strength_concentration|magnitude": 10,
+  "medication_order/medication_order/order:0/medication/strength_concentration|unit": "mg",
+  "medication_order/medication_order/order:0/route:0": "Oral",
+  "medication_order/medication_order/order:0/overall_directions_description": "1 tablet once daily in the morning",
+  "medication_order/medication_order/order:0/clinical_indication:0": "Essential hypertension",
+  "medication_order/medication_order/order:0/order_details/order_start_date_time": "2026-11-26T00:00:00",
+  "medication_order/medication_order/order:0/timing": "R/2026-11-27T08:00:00/P1D",
+  "medication_order/medication_order/order:0/timing|formalism": "timing",
+  "medication_order/medication_order/narrative": "Lisinopril 10 mg orally once daily"
+}
