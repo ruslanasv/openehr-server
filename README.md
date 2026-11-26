@@ -44,6 +44,11 @@ checks versions, runs AQL queries and prints response times. Results: `docs/medi
 On Windows it needs Git Bash (part of Git for Windows); plain `bash` in PowerShell starts WSL instead.
 To use Git Bash in the IntelliJ terminal: Settings > Tools > Terminal > Shell path = `C:\Program Files\Git\bin\bash.exe`.
 
+## API request examples
+
+- Postman collection + environment: `postman/` (see `postman/README.md`, also runnable with newman via Docker)
+- curl: `docs/api-examples-curl.md`
+
 ## IntelliJ HTTP client
 
 IntelliJ: open requests/openehr.http, choose environment `local`, run requests.

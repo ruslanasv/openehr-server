@@ -1,0 +1,1075 @@
+{
+  "info": {
+    "name": "openEHR – EHRbase local",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "openEHR REST API examples against a local EHRbase (see README).\n\nRun the folders top to bottom: each request stores ids (ehr_id, med_uid, …) in collection variables for the next ones.\nEnvironment: postman/local.postman_environment.json (base, user, password).\nCommand line: see postman/README.md (newman via Docker)."
+  },
+  "auth": {
+    "type": "basic",
+    "basic": [
+      {
+        "key": "username",
+        "value": "{{user}}",
+        "type": "string"
+      },
+      {
+        "key": "password",
+        "value": "{{password}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "patient_id",
+      "value": ""
+    },
+    {
+      "key": "ehr_id",
+      "value": ""
+    },
+    {
+      "key": "med_uid",
+      "value": ""
+    },
+    {
+      "key": "med_id",
+      "value": ""
+    },
+    {
+      "key": "med_uid_v1",
+      "value": ""
+    },
+    {
+      "key": "lis_uid",
+      "value": ""
+    },
+    {
+      "key": "lis_id",
+      "value": ""
+    },
+    {
+      "key": "diag_uid",
+      "value": ""
+    },
+    {
+      "key": "vitals_uid",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "0 Server",
+      "item": [
+        {
+          "name": "Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base}}/rest/status"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"has EHRbase version\", () => pm.expect(pm.response.json().ehrbase_version).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1 EHR",
+      "item": [
+        {
+          "name": "Create EHR with subject id",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/ehr",
+            "description": "Creates an EHR whose EHR_STATUS.subject points to patient {{patient_id}} (namespace \"patients\"). A new patient id is generated on each run.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"_type\": \"EHR_STATUS\",\n  \"archetype_node_id\": \"openEHR-EHR-EHR_STATUS.generic.v1\",\n  \"name\": {\n    \"value\": \"EHR Status\"\n  },\n  \"subject\": {\n    \"_type\": \"PARTY_SELF\",\n    \"external_ref\": {\n      \"id\": {\n        \"_type\": \"GENERIC_ID\",\n        \"value\": \"{{patient_id}}\",\n        \"scheme\": \"id_scheme\"\n      },\n      \"namespace\": \"patients\",\n      \"type\": \"PERSON\"\n    }\n  },\n  \"is_queryable\": true,\n  \"is_modifiable\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"patient_id\", \"PM-\" + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"ehr_id\", pm.response.json().ehr_id.value);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get EHR by id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/ehr/{{ehr_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get EHR by subject id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/ehr?subject_id={{patient_id}}&subject_namespace=patients"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"same EHR\", () => pm.expect(pm.response.json().ehr_id.value).to.eql(pm.collectionVariables.get(\"ehr_id\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get EHR_STATUS",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/ehr/{{ehr_id}}/ehr_status"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2 Templates",
+      "item": [
+        {
+          "name": "Upload template: medication_order (CKM)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/xml"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/definition/template/adl1.4",
+            "description": "Uploads `requests/templates/ckm/medication_order.opt`. In the Postman app, set Settings > General > Working directory to the repo root (or re-select the file in the Body tab).",
+            "body": {
+              "mode": "file",
+              "file": {
+                "src": "requests/templates/ckm/medication_order.opt"
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201/409\", () => pm.expect(pm.response.code).to.be.oneOf([201, 409]));",
+                  "// 409 = template already uploaded"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload template: minimal_diagnosis",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/xml"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/definition/template/adl1.4",
+            "description": "Uploads `requests/templates/minimal_diagnosis.opt`. In the Postman app, set Settings > General > Working directory to the repo root (or re-select the file in the Body tab).",
+            "body": {
+              "mode": "file",
+              "file": {
+                "src": "requests/templates/minimal_diagnosis.opt"
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201/409\", () => pm.expect(pm.response.code).to.be.oneOf([201, 409]));",
+                  "// 409 = template already uploaded"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload template: minimal_vital_signs",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/xml"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/definition/template/adl1.4",
+            "description": "Uploads `requests/templates/minimal_vital_signs.opt`. In the Postman app, set Settings > General > Working directory to the repo root (or re-select the file in the Body tab).",
+            "body": {
+              "mode": "file",
+              "file": {
+                "src": "requests/templates/minimal_vital_signs.opt"
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201/409\", () => pm.expect(pm.response.code).to.be.oneOf([201, 409]));",
+                  "// 409 = template already uploaded"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List templates",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/definition/template/adl1.4"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"medication_order present\", () => pm.expect(pm.response.json().map(t => t.template_id)).to.include(\"medication_order\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get web template (all FLAT paths)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/openehr.wt+json"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/definition/template/adl1.4/medication_order"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get example composition (FLAT)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/definition/template/adl1.4/medication_order/example?format=FLAT"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3 Composition lifecycle (medication order)",
+      "item": [
+        {
+          "name": "Create composition – metformin 500 mg (FLAT)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=minimal"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/ehr/{{ehr_id}}/composition?templateId=medication_order&format=FLAT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ctx/language\": \"en\",\n  \"ctx/territory\": \"LT\",\n  \"ctx/composer_name\": \"Dr. Jonas Jonaitis\",\n  \"ctx/health_care_facility|name\": \"Vilnius Clinic\",\n  \"ctx/time\": \"2026-11-26T10:05:00\",\n  \"ctx/setting|code\": \"228\",\n\n  \"medication_order/medication_order/order:0/medication_item|value\": \"Metformin 500 mg tablet\",\n  \"medication_order/medication_order/order:0/medication_item|code\": \"A10BA02\",\n  \"medication_order/medication_order/order:0/medication_item|terminology\": \"ATC\",\n  \"medication_order/medication_order/order:0/medication/form:0\": \"Tablet\",\n  \"medication_order/medication_order/order:0/medication/strength_concentration|magnitude\": 500,\n  \"medication_order/medication_order/order:0/medication/strength_concentration|unit\": \"mg\",\n  \"medication_order/medication_order/order:0/route:0\": \"Oral\",\n  \"medication_order/medication_order/order:0/overall_directions_description\": \"1 tablet twice daily with meals\",\n  \"medication_order/medication_order/order:0/clinical_indication:0\": \"Type 2 diabetes mellitus\",\n  \"medication_order/medication_order/order:0/order_details/order_start_date_time\": \"2026-11-26T00:00:00\",\n  \"medication_order/medication_order/order:0/timing\": \"R/2026-11-26T08:00:00/PT12H\",\n  \"medication_order/medication_order/order:0/timing|formalism\": \"timing\",\n  \"medication_order/medication_order/narrative\": \"Metformin 500 mg orally twice daily\"\n}\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201/204\", () => pm.expect(pm.response.code).to.be.oneOf([201, 204]));",
+                  "const etag = (pm.response.headers.get(\"ETag\") || \"\").replace(/\"/g, \"\");",
+                  "pm.test(\"ETag has version uid\", () => pm.expect(etag).to.match(/::\\d+$/));",
+                  "pm.collectionVariables.set(\"med_uid\", etag);",
+                  "pm.collectionVariables.set(\"med_id\", etag.split(\"::\")[0]);",
+                  "pm.collectionVariables.set(\"med_uid_v1\", etag);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read composition (FLAT)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/ehr/{{ehr_id}}/composition/{{med_id}}?format=FLAT"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"strength 500\", () => pm.expect(pm.response.json()[\"medication_order/medication_order/order:0/medication/strength_concentration|magnitude\"]).to.eql(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read composition (canonical JSON)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/ehr/{{ehr_id}}/composition/{{med_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"is COMPOSITION\", () => pm.expect(pm.response.json()._type).to.eql(\"COMPOSITION\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read composition (canonical XML)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/xml"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/ehr/{{ehr_id}}/composition/{{med_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update composition – metformin 1000 mg",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=minimal"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{med_uid}}"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/ehr/{{ehr_id}}/composition/{{med_id}}?templateId=medication_order&format=FLAT",
+            "description": "If-Match must carry the current version uid (optimistic locking).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ctx/language\": \"en\",\n  \"ctx/territory\": \"LT\",\n  \"ctx/composer_name\": \"Dr. Jonas Jonaitis\",\n  \"ctx/health_care_facility|name\": \"Vilnius Clinic\",\n  \"ctx/time\": \"2026-11-26T10:05:00\",\n  \"ctx/setting|code\": \"228\",\n\n  \"medication_order/medication_order/order:0/medication_item|value\": \"Metformin 1000 mg tablet\",\n  \"medication_order/medication_order/order:0/medication_item|code\": \"A10BA02\",\n  \"medication_order/medication_order/order:0/medication_item|terminology\": \"ATC\",\n  \"medication_order/medication_order/order:0/medication/form:0\": \"Tablet\",\n  \"medication_order/medication_order/order:0/medication/strength_concentration|magnitude\": 1000,\n  \"medication_order/medication_order/order:0/medication/strength_concentration|unit\": \"mg\",\n  \"medication_order/medication_order/order:0/route:0\": \"Oral\",\n  \"medication_order/medication_order/order:0/overall_directions_description\": \"1 tablet twice daily with meals\",\n  \"medication_order/medication_order/order:0/clinical_indication:0\": \"Type 2 diabetes mellitus\",\n  \"medication_order/medication_order/order:0/order_details/order_start_date_time\": \"2026-11-26T00:00:00\",\n  \"medication_order/medication_order/order:0/timing\": \"R/2026-11-26T08:00:00/PT12H\",\n  \"medication_order/medication_order/order:0/timing|formalism\": \"timing\",\n  \"medication_order/medication_order/narrative\": \"Metformin 1000 mg orally twice daily\"\n}\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200/204\", () => pm.expect(pm.response.code).to.be.oneOf([200, 204]));",
+                  "const etag = (pm.response.headers.get(\"ETag\") || \"\").replace(/\"/g, \"\");",
+                  "pm.test(\"ETag has version uid\", () => pm.expect(etag).to.match(/::\\d+$/));",
+                  "pm.collectionVariables.set(\"med_uid\", etag);",
+                  "pm.test(\"version 2\", () => pm.expect(etag).to.match(/::2$/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Revision history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/ehr/{{ehr_id}}/versioned_composition/{{med_id}}/revision_history"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"2 versions\", () => pm.expect(pm.response.json().items.length).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read version 1",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/ehr/{{ehr_id}}/composition/{{med_uid_v1}}?format=FLAT"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"version 1 still 500\", () => pm.expect(pm.response.json()[\"medication_order/medication_order/order:0/medication/strength_concentration|magnitude\"]).to.eql(500));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read latest version",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/ehr/{{ehr_id}}/composition/{{med_id}}?format=FLAT"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"latest is 1000\", () => pm.expect(pm.response.json()[\"medication_order/medication_order/order:0/medication/strength_concentration|magnitude\"]).to.eql(1000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update with stale If-Match → 412",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=minimal"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{med_uid_v1}}"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/ehr/{{ehr_id}}/composition/{{med_id}}?templateId=medication_order&format=FLAT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ctx/language\": \"en\",\n  \"ctx/territory\": \"LT\",\n  \"ctx/composer_name\": \"Dr. Jonas Jonaitis\",\n  \"ctx/health_care_facility|name\": \"Vilnius Clinic\",\n  \"ctx/time\": \"2026-11-26T10:05:00\",\n  \"ctx/setting|code\": \"228\",\n\n  \"medication_order/medication_order/order:0/medication_item|value\": \"Metformin 1000 mg tablet\",\n  \"medication_order/medication_order/order:0/medication_item|code\": \"A10BA02\",\n  \"medication_order/medication_order/order:0/medication_item|terminology\": \"ATC\",\n  \"medication_order/medication_order/order:0/medication/form:0\": \"Tablet\",\n  \"medication_order/medication_order/order:0/medication/strength_concentration|magnitude\": 1000,\n  \"medication_order/medication_order/order:0/medication/strength_concentration|unit\": \"mg\",\n  \"medication_order/medication_order/order:0/route:0\": \"Oral\",\n  \"medication_order/medication_order/order:0/overall_directions_description\": \"1 tablet twice daily with meals\",\n  \"medication_order/medication_order/order:0/clinical_indication:0\": \"Type 2 diabetes mellitus\",\n  \"medication_order/medication_order/order:0/order_details/order_start_date_time\": \"2026-11-26T00:00:00\",\n  \"medication_order/medication_order/order:0/timing\": \"R/2026-11-26T08:00:00/PT12H\",\n  \"medication_order/medication_order/order:0/timing|formalism\": \"timing\",\n  \"medication_order/medication_order/narrative\": \"Metformin 1000 mg orally twice daily\"\n}\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 412\", () => pm.response.to.have.status(412));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4 More compositions",
+      "item": [
+        {
+          "name": "Create medication order – lisinopril",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=minimal"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/ehr/{{ehr_id}}/composition?templateId=medication_order&format=FLAT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ctx/language\": \"en\",\n  \"ctx/territory\": \"LT\",\n  \"ctx/composer_name\": \"Dr. Jonas Jonaitis\",\n  \"ctx/health_care_facility|name\": \"Vilnius Clinic\",\n  \"ctx/time\": \"2026-11-26T10:10:00\",\n  \"ctx/setting|code\": \"228\",\n\n  \"medication_order/medication_order/order:0/medication_item|value\": \"Lisinopril 10 mg tablet\",\n  \"medication_order/medication_order/order:0/medication_item|code\": \"C09AA03\",\n  \"medication_order/medication_order/order:0/medication_item|terminology\": \"ATC\",\n  \"medication_order/medication_order/order:0/medication/form:0\": \"Tablet\",\n  \"medication_order/medication_order/order:0/medication/strength_concentration|magnitude\": 10,\n  \"medication_order/medication_order/order:0/medication/strength_concentration|unit\": \"mg\",\n  \"medication_order/medication_order/order:0/route:0\": \"Oral\",\n  \"medication_order/medication_order/order:0/overall_directions_description\": \"1 tablet once daily in the morning\",\n  \"medication_order/medication_order/order:0/clinical_indication:0\": \"Essential hypertension\",\n  \"medication_order/medication_order/order:0/order_details/order_start_date_time\": \"2026-11-26T00:00:00\",\n  \"medication_order/medication_order/order:0/timing\": \"R/2026-11-27T08:00:00/P1D\",\n  \"medication_order/medication_order/order:0/timing|formalism\": \"timing\",\n  \"medication_order/medication_order/narrative\": \"Lisinopril 10 mg orally once daily\"\n}\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201/204\", () => pm.expect(pm.response.code).to.be.oneOf([201, 204]));",
+                  "const etag = (pm.response.headers.get(\"ETag\") || \"\").replace(/\"/g, \"\");",
+                  "pm.test(\"ETag has version uid\", () => pm.expect(etag).to.match(/::\\d+$/));",
+                  "pm.collectionVariables.set(\"lis_uid\", etag);",
+                  "pm.collectionVariables.set(\"lis_id\", etag.split(\"::\")[0]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create diagnosis (ICD-10)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=minimal"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/ehr/{{ehr_id}}/composition?templateId=minimal_diagnosis.v0&format=FLAT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ctx/language\": \"en\",\n  \"ctx/territory\": \"LT\",\n  \"ctx/composer_name\": \"Dr. Jonas Jonaitis\",\n  \"ctx/health_care_facility|name\": \"Vilnius Clinic\",\n  \"ctx/time\": \"2026-11-26T10:00:00\",\n  \"ctx/setting|code\": \"228\",\n\n  \"diagnosis/problem_diagnosis:0/problem_diagnosis_name|code\": \"I10\",\n  \"diagnosis/problem_diagnosis:0/problem_diagnosis_name|value\": \"Essential (primary) hypertension\",\n  \"diagnosis/problem_diagnosis:0/problem_diagnosis_name|terminology\": \"ICD10\",\n  \"diagnosis/problem_diagnosis:0/date_time_of_onset\": \"2025-03-01T00:00:00\",\n  \"diagnosis/problem_diagnosis:0/severity|code\": \"at0048\",\n  \"diagnosis/problem_diagnosis:0/clinical_description\": \"Repeated office BP above 150/95 mmHg.\",\n\n  \"diagnosis/problem_diagnosis:1/problem_diagnosis_name|code\": \"E11.9\",\n  \"diagnosis/problem_diagnosis:1/problem_diagnosis_name|value\": \"Type 2 diabetes mellitus without complications\",\n  \"diagnosis/problem_diagnosis:1/problem_diagnosis_name|terminology\": \"ICD10\"\n}\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201/204\", () => pm.expect(pm.response.code).to.be.oneOf([201, 204]));",
+                  "const etag = (pm.response.headers.get(\"ETag\") || \"\").replace(/\"/g, \"\");",
+                  "pm.test(\"ETag has version uid\", () => pm.expect(etag).to.match(/::\\d+$/));",
+                  "pm.collectionVariables.set(\"diag_uid\", etag);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create vital signs",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=minimal"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/ehr/{{ehr_id}}/composition?templateId=minimal_vital_signs.v0&format=FLAT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ctx/language\": \"en\",\n  \"ctx/territory\": \"LT\",\n  \"ctx/composer_name\": \"Nurse Ona Onaitė\",\n  \"ctx/health_care_facility|name\": \"Vilnius Clinic\",\n  \"ctx/time\": \"2026-11-26T09:45:00\",\n  \"ctx/setting|code\": \"228\",\n\n  \"vital_signs/blood_pressure/any_event:0/time\": \"2026-11-26T09:45:00\",\n  \"vital_signs/blood_pressure/any_event:0/systolic|magnitude\": 152,\n  \"vital_signs/blood_pressure/any_event:0/systolic|unit\": \"mm[Hg]\",\n  \"vital_signs/blood_pressure/any_event:0/diastolic|magnitude\": 96,\n  \"vital_signs/blood_pressure/any_event:0/diastolic|unit\": \"mm[Hg]\",\n\n  \"vital_signs/pulse_heart_beat/any_event:0/time\": \"2026-11-26T09:45:00\",\n  \"vital_signs/pulse_heart_beat/any_event:0/rate|magnitude\": 78,\n  \"vital_signs/pulse_heart_beat/any_event:0/rate|unit\": \"/min\",\n\n  \"vital_signs/body_temperature/any_event:0/time\": \"2026-11-26T09:45:00\",\n  \"vital_signs/body_temperature/any_event:0/temperature|magnitude\": 36.7,\n  \"vital_signs/body_temperature/any_event:0/temperature|unit\": \"Cel\",\n\n  \"vital_signs/body_weight/any_event:0/time\": \"2026-11-26T09:45:00\",\n  \"vital_signs/body_weight/any_event:0/weight|magnitude\": 84.5,\n  \"vital_signs/body_weight/any_event:0/weight|unit\": \"kg\"\n}\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201/204\", () => pm.expect(pm.response.code).to.be.oneOf([201, 204]));",
+                  "const etag = (pm.response.headers.get(\"ETag\") || \"\").replace(/\"/g, \"\");",
+                  "pm.test(\"ETag has version uid\", () => pm.expect(etag).to.match(/::\\d+$/));",
+                  "pm.collectionVariables.set(\"vitals_uid\", etag);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5 AQL",
+      "item": [
+        {
+          "name": "By patient – medications",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/query/aql",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"q\": \"SELECT c/context/start_time/value AS ordered, m/activities[at0001]/description[at0002]/items[at0070]/value/value AS medication, m/activities[at0001]/description[at0002]/items[at0009]/value/value AS directions FROM EHR e CONTAINS COMPOSITION c CONTAINS INSTRUCTION m[openEHR-EHR-INSTRUCTION.medication_order.v3] WHERE e/ehr_status/subject/external_ref/id/value = $patient AND e/ehr_status/subject/external_ref/namespace = 'patients' ORDER BY c/context/start_time/value\",\n  \"query_parameters\": {\n    \"patient\": \"{{patient_id}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"returns rows\", () => pm.expect(pm.response.json().rows.length).to.be.at.least(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "By template – compositions per patient",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/query/aql",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"q\": \"SELECT e/ehr_status/subject/external_ref/id/value AS patient, COUNT(c/uid/value) AS orders FROM EHR e CONTAINS COMPOSITION c WHERE c/archetype_details/template_id/value = $template\",\n  \"query_parameters\": {\n    \"template\": \"medication_order\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"returns rows\", () => pm.expect(pm.response.json().rows.length).to.be.at.least(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "By medication – ATC A10BA02 (metformin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/query/aql",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"q\": \"SELECT e/ehr_status/subject/external_ref/id/value AS patient, m/activities[at0001]/description[at0002]/items[at0070]/value/value AS medication, c/uid/value AS composition FROM EHR e CONTAINS COMPOSITION c CONTAINS INSTRUCTION m[openEHR-EHR-INSTRUCTION.medication_order.v3] WHERE m/activities[at0001]/description[at0002]/items[at0070]/value/defining_code/code_string = $atc\",\n  \"query_parameters\": {\n    \"atc\": \"A10BA02\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"returns rows\", () => pm.expect(pm.response.json().rows.length).to.be.at.least(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Diagnoses by ICD-10 code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/query/aql",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"q\": \"SELECT e/ehr_status/subject/external_ref/id/value AS patient, d/data[at0001]/items[at0002]/value/value AS diagnosis FROM EHR e CONTAINS EVALUATION d[openEHR-EHR-EVALUATION.problem_diagnosis.v1] WHERE d/data[at0001]/items[at0002]/value/defining_code/code_string = $icd10\",\n  \"query_parameters\": {\n    \"icd10\": \"I10\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"returns rows\", () => pm.expect(pm.response.json().rows.length).to.be.at.least(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vital signs of the patient",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/query/aql",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"q\": \"SELECT bp/data[at0001]/events[at0006]/time/value AS time, bp/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude AS systolic, bp/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude AS diastolic, p/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude AS pulse FROM EHR e[ehr_id/value=$ehr_id] CONTAINS COMPOSITION c CONTAINS (OBSERVATION bp[openEHR-EHR-OBSERVATION.blood_pressure.v2] AND OBSERVATION p[openEHR-EHR-OBSERVATION.pulse.v2])\",\n  \"query_parameters\": {\n    \"ehr_id\": \"{{ehr_id}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"returns rows\", () => pm.expect(pm.response.json().rows.length).to.be.at.least(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET query (URL parameters)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/query/aql?q=SELECT e/ehr_id/value FROM EHR e LIMIT 5"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"returns rows\", () => pm.expect(pm.response.json().rows.length).to.be.at.least(1));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6 Delete",
+      "item": [
+        {
+          "name": "Delete composition (lisinopril)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{base}}/rest/openehr/v1/ehr/{{ehr_id}}/composition/{{lis_uid}}",
+            "description": "Logical delete: takes the current version uid. History is kept; the composition no longer appears in AQL results."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read deleted composition",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base}}/rest/openehr/v1/ehr/{{ehr_id}}/composition/{{lis_id}}",
+            "description": "EHRbase answers 204 No Content for a deleted composition."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204/404\", () => pm.expect(pm.response.code).to.be.oneOf([204, 404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
