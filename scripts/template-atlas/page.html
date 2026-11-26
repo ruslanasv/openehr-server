@@ -1,0 +1,184 @@
+<title>openEHR Template Atlas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Sans:wght@500;600;700&display=swap">
+<style>
+/* Layout: chart-room atlas. Overview map of EHR → compositions → entries on top, then one template explorer tree with inline field cards. */
+:root {
+  --bg: #f5f8f8; --surface: #ffffff; --sunk: #eaf0f0; --line: #d3dede; --fg: #15282b; --muted: #5a6f73;
+  --accent: #0d7468; --accent-soft: #d6efea; --example: #8a5a00; --example-soft: #fff1d1;
+  --c-obs: #2b67a8; --c-eval: #7449b0; --c-instr: #a8650f; --c-cluster: #56686e; --c-comp: #0d7468;
+  --f-display: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1a1c; --surface: #152427; --sunk: #1b2e31; --line: #2a4144; --fg: #e3eeee; --muted: #93aaad;
+  --accent: #4cc2b0; --accent-soft: #163d39; --example: #f0b955; --example-soft: #3a2e14;
+  --c-obs: #6fa8e6; --c-eval: #b090ea; --c-instr: #e3a24a; --c-cluster: #9db0b5; --c-comp: #4cc2b0; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f1a1c; --surface: #152427; --sunk: #1b2e31; --line: #2a4144; --fg: #e3eeee; --muted: #93aaad;
+  --accent: #4cc2b0; --accent-soft: #163d39; --example: #f0b955; --example-soft: #3a2e14;
+  --c-obs: #6fa8e6; --c-eval: #b090ea; --c-instr: #e3a24a; --c-cluster: #9db0b5; --c-comp: #4cc2b0; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px 64px }
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 40px }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em }
+h1 { font-size: 2.1rem; font-weight: 700 }
+h2 { font-size: 1.35rem; font-weight: 600 }
+h3 { font-size: 1.05rem; font-weight: 600 }
+p { margin: 0; max-width: 68ch }
+code, .mono { font-family: var(--f-mono); font-size: 0.86em }
+.eyebrow { font: 500 0.72rem/1 var(--f-mono); text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted) }
+.lede { color: var(--muted); margin-top: 8px }
+header { display: grid; gap: 6px }
+
+/* overview map */
+.map { display: grid; gap: 0; justify-items: center }
+.ehr { background: var(--fg); color: var(--bg); border-radius: 6px; padding: 10px 18px; display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; justify-content: center }
+.ehr b { font-family: var(--f-display); font-size: 1.1rem }
+.ehr span { font-size: 0.85rem; opacity: 0.8 }
+.stem { width: 2px; height: 20px; background: var(--line) }
+.branches { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; border-top: 2px solid var(--line); padding-top: 20px; position: relative }
+.tcard { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: grid; gap: 10px; align-content: start; cursor: pointer; text-align: left; font: inherit; color: inherit; position: relative }
+.tcard::before { content: ""; position: absolute; top: -22px; left: 50%; width: 2px; height: 20px; background: var(--line) }
+.tcard:hover, .tcard:focus-visible { border-color: var(--accent); outline: none }
+.tcard .count { font: 600 1.9rem/1 var(--f-display); font-variant-numeric: tabular-nums }
+.tcard .count small { font: 400 0.8rem var(--f-body); color: var(--muted); margin-left: 6px }
+.tcard .tid { font-family: var(--f-mono); font-size: 0.78rem; color: var(--muted); word-break: break-all }
+.chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chip { font-size: 0.8rem; padding: 2px 8px; border-radius: 4px; border: 1px solid currentColor; display: inline-flex; gap: 6px; align-items: center }
+.chip i { font-style: normal; font: 500 0.64rem var(--f-mono); text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.85 }
+.k-OBSERVATION { color: var(--c-obs) } .k-EVALUATION { color: var(--c-eval) } .k-INSTRUCTION, .k-ACTIVITY { color: var(--c-instr) }
+.k-CLUSTER, .k-EVENT { color: var(--c-cluster) } .k-COMPOSITION { color: var(--c-comp) }
+.tcard .meta { font-size: 0.82rem; color: var(--muted) }
+.asof { font-size: 0.8rem; color: var(--muted); text-align: center; margin-top: 12px }
+
+/* explainer */
+.anatomy { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden }
+.anatomy > div { background: var(--surface); padding: 14px 16px; display: grid; gap: 4px; align-content: start }
+.anatomy b { font-family: var(--f-display); font-size: 0.98rem }
+.anatomy p { font-size: 0.87rem; color: var(--muted) }
+
+/* explorer */
+.explorer { display: grid; gap: 16px }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--line) }
+.tab { font: 500 0.95rem var(--f-body); background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 14px; color: var(--muted); cursor: pointer; margin-bottom: -1px }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent) }
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; justify-content: space-between }
+.toggles { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 0.88rem }
+.toggles label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer }
+.toggles input { accent-color: var(--accent) }
+.summary { display: flex; gap: 18px; flex-wrap: wrap; font-size: 0.85rem; color: var(--muted) }
+.summary b { color: var(--fg); font-variant-numeric: tabular-nums }
+.tdesc { color: var(--muted); font-size: 0.9rem }
+
+.tree { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 0; overflow-x: auto }
+.node { display: block }
+.kids { margin-left: 22px; border-left: 1px dashed var(--line) }
+.row { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 8px; align-items: center; width: 100%; padding: 4px 14px 4px 8px; border-radius: 4px }
+.row:hover { background: var(--sunk) }
+.row button { background: none; border: 0; font: inherit; color: inherit; cursor: pointer; padding: 0; border-radius: 3px }
+.row button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px }
+.caret { width: 18px; text-align: center; color: var(--muted); font-size: 0.75rem; transition: transform .15s }
+.node.closed > .row .caret { transform: rotate(-90deg) }
+.node.closed > .kids { display: none }
+.label { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; min-width: 0; text-align: left; padding: 2px 0 !important }
+.label .nm { font-weight: 500 }
+.node.container > .row .nm { font-family: var(--f-display); font-weight: 600 }
+.type { font: 0.74rem var(--f-mono); color: var(--muted) }
+.ex { font-size: 0.82rem; color: var(--example); background: var(--example-soft); padding: 0 6px; border-radius: 3px; max-width: 46ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.pill { font: 500 0.7rem var(--f-mono); padding: 1px 7px; border-radius: 10px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap }
+.pill.req { border-color: var(--accent); color: var(--accent) }
+.pill.many { background: var(--accent-soft); border-color: transparent; color: var(--accent) }
+.tech .nm { color: var(--muted); font-style: italic }
+.dot { width: 9px; height: 9px; border-radius: 2px; background: currentColor; display: inline-block; flex: none; align-self: center }
+
+.card { margin: 2px 14px 10px 34px; background: var(--sunk); border-radius: 6px; padding: 12px 14px; display: grid; gap: 10px; font-size: 0.88rem }
+.card dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; margin: 0 }
+.card dt { color: var(--muted); font-size: 0.8rem }
+.card dd { margin: 0; min-width: 0; overflow-wrap: anywhere }
+.vals { display: flex; flex-wrap: wrap; gap: 4px }
+.vals span { background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; font-size: 0.82rem }
+.vals span code { color: var(--muted) }
+.path { display: flex; gap: 8px; align-items: flex-start }
+.path code { flex: 1; min-width: 0; overflow-wrap: anywhere }
+.copy { font: 500 0.72rem var(--f-body); border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 4px; padding: 1px 8px; cursor: pointer; flex: none }
+.copy:hover { border-color: var(--accent) }
+
+.ctx { display: grid; gap: 8px }
+.ctx pre { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; font: 0.8rem/1.6 var(--f-mono); overflow-x: auto }
+.ctx pre .k { color: var(--accent) } .ctx pre .v { color: var(--example) }
+details > summary { cursor: pointer; color: var(--muted); font-size: 0.88rem }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 0.82rem; color: var(--muted); align-items: center }
+footer { font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px }
+
+@media (max-width: 760px) {
+  .branches { grid-template-columns: minmax(0, 1fr); border-top: 0; padding-top: 0 }
+  .tcard::before { display: none }
+  .anatomy { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) }
+  .row { grid-template-columns: 18px minmax(0, 1fr) }
+  .row .pill { grid-column: 2; justify-self: start }
+  .card { margin-left: 14px }
+  .ex { max-width: 100% }
+}
+@media (prefers-reduced-motion: reduce) { .caret { transition: none } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Local EHRbase</span>
+    <h1>openEHR Template Atlas</h1>
+    <p class="lede">What each template on the server contains, how the pieces nest, and what a real composition puts into each field. Click a template card to explore it field by field.</p>
+  </header>
+
+  <section aria-labelledby="map-h" style="display:grid;gap:16px">
+    <h2 id="map-h">What is stored</h2>
+    <div class="map">
+      <div class="ehr"><b id="ehr-count">EHRs</b><span>one per patient</span></div>
+      <div class="stem"></div>
+      <div class="branches" id="branches"></div>
+    </div>
+    <div class="asof" id="asof"></div>
+  </section>
+
+  <section aria-labelledby="anat-h" style="display:grid;gap:14px">
+    <h2 id="anat-h">How a composition is built</h2>
+    <div class="anatomy">
+      <div><span class="eyebrow k-COMPOSITION">Composition</span><b>One clinical document</b><p>A visit note or an order, saved in a patient's EHR. Each new save of it is a new version.</p></div>
+      <div><span class="eyebrow">Context</span><b>Who, when, where</b><p>Author, start time, setting, facility. Sent once as <code>ctx/…</code> fields in FLAT format.</p></div>
+      <div><span class="eyebrow k-OBSERVATION">Entry</span><b>Clinical statement</b><p>An archetype such as Blood pressure (observation), Problem/Diagnosis (evaluation) or Medication order (instruction).</p></div>
+      <div><span class="eyebrow">Element</span><b>Single value</b><p>A quantity with unit, a coded term (ICD-10, ATC), text or a date. Groups of elements are clusters.</p></div>
+    </div>
+  </section>
+
+  <section class="explorer" id="explorer" aria-labelledby="exp-h">
+    <h2 id="exp-h">Template explorer</h2>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <p class="tdesc" id="tdesc"></p>
+    <div class="toolbar">
+      <div class="toggles">
+        <label for="opt-tech"><input type="checkbox" id="opt-tech"> Show technical fields</label>
+        <label for="opt-used"><input type="checkbox" id="opt-used"> Only fields in the example</label>
+      </div>
+      <div class="summary" id="summary"></div>
+    </div>
+    <div class="legend">
+      <span><span class="pill req">required</span> must be sent</span>
+      <span><span class="pill">optional</span> may be left out</span>
+      <span><span class="pill many">0 or more</span> can repeat</span>
+      <span><span class="ex">152 mm[Hg]</span> value from the example composition</span>
+    </div>
+    <div class="tree" id="tree" role="tree"></div>
+    <div class="ctx">
+      <details>
+        <summary id="ctx-sum">Example composition as sent (FLAT JSON)</summary>
+        <pre id="ctx-pre"></pre>
+      </details>
+    </div>
+  </section>
+
+  <footer>Structure from the server's web templates (<code>GET /definition/template/adl1.4/{id}</code>, <code>application/openehr.wt+json</code>). Example values from <code>requests/compositions/*.flat.json</code>. Click a field to see allowed values, its FLAT path and its AQL path.</footer>
+</div>

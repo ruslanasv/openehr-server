@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"></head><body>
+<title>openEHR Template Atlas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Sans:wght@500;600;700&display=swap">
+<style>
+/* Layout: chart-room atlas. Overview map of EHR → compositions → entries on top, then one template explorer tree with inline field cards. */
+:root {
+  --bg: #f5f8f8; --surface: #ffffff; --sunk: #eaf0f0; --line: #d3dede; --fg: #15282b; --muted: #5a6f73;
+  --accent: #0d7468; --accent-soft: #d6efea; --example: #8a5a00; --example-soft: #fff1d1;
+  --c-obs: #2b67a8; --c-eval: #7449b0; --c-instr: #a8650f; --c-cluster: #56686e; --c-comp: #0d7468;
+  --f-display: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1a1c; --surface: #152427; --sunk: #1b2e31; --line: #2a4144; --fg: #e3eeee; --muted: #93aaad;
+  --accent: #4cc2b0; --accent-soft: #163d39; --example: #f0b955; --example-soft: #3a2e14;
+  --c-obs: #6fa8e6; --c-eval: #b090ea; --c-instr: #e3a24a; --c-cluster: #9db0b5; --c-comp: #4cc2b0; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f1a1c; --surface: #152427; --sunk: #1b2e31; --line: #2a4144; --fg: #e3eeee; --muted: #93aaad;
+  --accent: #4cc2b0; --accent-soft: #163d39; --example: #f0b955; --example-soft: #3a2e14;
+  --c-obs: #6fa8e6; --c-eval: #b090ea; --c-instr: #e3a24a; --c-cluster: #9db0b5; --c-comp: #4cc2b0; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px 64px }
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 40px }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em }
+h1 { font-size: 2.1rem; font-weight: 700 }
+h2 { font-size: 1.35rem; font-weight: 600 }
+h3 { font-size: 1.05rem; font-weight: 600 }
+p { margin: 0; max-width: 68ch }
+code, .mono { font-family: var(--f-mono); font-size: 0.86em }
+.eyebrow { font: 500 0.72rem/1 var(--f-mono); text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted) }
+.lede { color: var(--muted); margin-top: 8px }
+header { display: grid; gap: 6px }
+
+/* overview map */
+.map { display: grid; gap: 0; justify-items: center }
+.ehr { background: var(--fg); color: var(--bg); border-radius: 6px; padding: 10px 18px; display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; justify-content: center }
+.ehr b { font-family: var(--f-display); font-size: 1.1rem }
+.ehr span { font-size: 0.85rem; opacity: 0.8 }
+.stem { width: 2px; height: 20px; background: var(--line) }
+.branches { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; border-top: 2px solid var(--line); padding-top: 20px; position: relative }
+.tcard { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: grid; gap: 10px; align-content: start; cursor: pointer; text-align: left; font: inherit; color: inherit; position: relative }
+.tcard::before { content: ""; position: absolute; top: -22px; left: 50%; width: 2px; height: 20px; background: var(--line) }
+.tcard:hover, .tcard:focus-visible { border-color: var(--accent); outline: none }
+.tcard .count { font: 600 1.9rem/1 var(--f-display); font-variant-numeric: tabular-nums }
+.tcard .count small { font: 400 0.8rem var(--f-body); color: var(--muted); margin-left: 6px }
+.tcard .tid { font-family: var(--f-mono); font-size: 0.78rem; color: var(--muted); word-break: break-all }
+.chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chip { font-size: 0.8rem; padding: 2px 8px; border-radius: 4px; border: 1px solid currentColor; display: inline-flex; gap: 6px; align-items: center }
+.chip i { font-style: normal; font: 500 0.64rem var(--f-mono); text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.85 }
+.k-OBSERVATION { color: var(--c-obs) } .k-EVALUATION { color: var(--c-eval) } .k-INSTRUCTION, .k-ACTIVITY { color: var(--c-instr) }
+.k-CLUSTER, .k-EVENT { color: var(--c-cluster) } .k-COMPOSITION { color: var(--c-comp) }
+.tcard .meta { font-size: 0.82rem; color: var(--muted) }
+.asof { font-size: 0.8rem; color: var(--muted); text-align: center; margin-top: 12px }
+
+/* explainer */
+.anatomy { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden }
+.anatomy > div { background: var(--surface); padding: 14px 16px; display: grid; gap: 4px; align-content: start }
+.anatomy b { font-family: var(--f-display); font-size: 0.98rem }
+.anatomy p { font-size: 0.87rem; color: var(--muted) }
+
+/* explorer */
+.explorer { display: grid; gap: 16px }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--line) }
+.tab { font: 500 0.95rem var(--f-body); background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 14px; color: var(--muted); cursor: pointer; margin-bottom: -1px }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent) }
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; justify-content: space-between }
+.toggles { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 0.88rem }
+.toggles label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer }
+.toggles input { accent-color: var(--accent) }
+.summary { display: flex; gap: 18px; flex-wrap: wrap; font-size: 0.85rem; color: var(--muted) }
+.summary b { color: var(--fg); font-variant-numeric: tabular-nums }
+.tdesc { color: var(--muted); font-size: 0.9rem }
+
+.tree { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 0; overflow-x: auto }
+.node { display: block }
+.kids { margin-left: 22px; border-left: 1px dashed var(--line) }
+.row { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 8px; align-items: center; width: 100%; padding: 4px 14px 4px 8px; border-radius: 4px }
+.row:hover { background: var(--sunk) }
+.row button { background: none; border: 0; font: inherit; color: inherit; cursor: pointer; padding: 0; border-radius: 3px }
+.row button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px }
+.caret { width: 18px; text-align: center; color: var(--muted); font-size: 0.75rem; transition: transform .15s }
+.node.closed > .row .caret { transform: rotate(-90deg) }
+.node.closed > .kids { display: none }
+.label { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; min-width: 0; text-align: left; padding: 2px 0 !important }
+.label .nm { font-weight: 500 }
+.node.container > .row .nm { font-family: var(--f-display); font-weight: 600 }
+.type { font: 0.74rem var(--f-mono); color: var(--muted) }
+.ex { font-size: 0.82rem; color: var(--example); background: var(--example-soft); padding: 0 6px; border-radius: 3px; max-width: 46ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.pill { font: 500 0.7rem var(--f-mono); padding: 1px 7px; border-radius: 10px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap }
+.pill.req { border-color: var(--accent); color: var(--accent) }
+.pill.many { background: var(--accent-soft); border-color: transparent; color: var(--accent) }
+.tech .nm { color: var(--muted); font-style: italic }
+.dot { width: 9px; height: 9px; border-radius: 2px; background: currentColor; display: inline-block; flex: none; align-self: center }
+
+.card { margin: 2px 14px 10px 34px; background: var(--sunk); border-radius: 6px; padding: 12px 14px; display: grid; gap: 10px; font-size: 0.88rem }
+.card dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; margin: 0 }
+.card dt { color: var(--muted); font-size: 0.8rem }
+.card dd { margin: 0; min-width: 0; overflow-wrap: anywhere }
+.vals { display: flex; flex-wrap: wrap; gap: 4px }
+.vals span { background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; font-size: 0.82rem }
+.vals span code { color: var(--muted) }
+.path { display: flex; gap: 8px; align-items: flex-start }
+.path code { flex: 1; min-width: 0; overflow-wrap: anywhere }
+.copy { font: 500 0.72rem var(--f-body); border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 4px; padding: 1px 8px; cursor: pointer; flex: none }
+.copy:hover { border-color: var(--accent) }
+
+.ctx { display: grid; gap: 8px }
+.ctx pre { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; font: 0.8rem/1.6 var(--f-mono); overflow-x: auto }
+.ctx pre .k { color: var(--accent) } .ctx pre .v { color: var(--example) }
+details > summary { cursor: pointer; color: var(--muted); font-size: 0.88rem }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 0.82rem; color: var(--muted); align-items: center }
+footer { font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px }
+
+@media (max-width: 760px) {
+  .branches { grid-template-columns: minmax(0, 1fr); border-top: 0; padding-top: 0 }
+  .tcard::before { display: none }
+  .anatomy { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) }
+  .row { grid-template-columns: 18px minmax(0, 1fr) }
+  .row .pill { grid-column: 2; justify-self: start }
+  .card { margin-left: 14px }
+  .ex { max-width: 100% }
+}
+@media (prefers-reduced-motion: reduce) { .caret { transition: none } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Local EHRbase</span>
+    <h1>openEHR Template Atlas</h1>
+    <p class="lede">What each template on the server contains, how the pieces nest, and what a real composition puts into each field. Click a template card to explore it field by field.</p>
+  </header>
+
+  <section aria-labelledby="map-h" style="display:grid;gap:16px">
+    <h2 id="map-h">What is stored</h2>
+    <div class="map">
+      <div class="ehr"><b id="ehr-count">EHRs</b><span>one per patient</span></div>
+      <div class="stem"></div>
+      <div class="branches" id="branches"></div>
+    </div>
+    <div class="asof" id="asof"></div>
+  </section>
+
+  <section aria-labelledby="anat-h" style="display:grid;gap:14px">
+    <h2 id="anat-h">How a composition is built</h2>
+    <div class="anatomy">
+      <div><span class="eyebrow k-COMPOSITION">Composition</span><b>One clinical document</b><p>A visit note or an order, saved in a patient's EHR. Each new save of it is a new version.</p></div>
+      <div><span class="eyebrow">Context</span><b>Who, when, where</b><p>Author, start time, setting, facility. Sent once as <code>ctx/…</code> fields in FLAT format.</p></div>
+      <div><span class="eyebrow k-OBSERVATION">Entry</span><b>Clinical statement</b><p>An archetype such as Blood pressure (observation), Problem/Diagnosis (evaluation) or Medication order (instruction).</p></div>
+      <div><span class="eyebrow">Element</span><b>Single value</b><p>A quantity with unit, a coded term (ICD-10, ATC), text or a date. Groups of elements are clusters.</p></div>
+    </div>
+  </section>
+
+  <section class="explorer" id="explorer" aria-labelledby="exp-h">
+    <h2 id="exp-h">Template explorer</h2>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <p class="tdesc" id="tdesc"></p>
+    <div class="toolbar">
+      <div class="toggles">
+        <label for="opt-tech"><input type="checkbox" id="opt-tech"> Show technical fields</label>
+        <label for="opt-used"><input type="checkbox" id="opt-used"> Only fields in the example</label>
+      </div>
+      <div class="summary" id="summary"></div>
+    </div>
+    <div class="legend">
+      <span><span class="pill req">required</span> must be sent</span>
+      <span><span class="pill">optional</span> may be left out</span>
+      <span><span class="pill many">0 or more</span> can repeat</span>
+      <span><span class="ex">152 mm[Hg]</span> value from the example composition</span>
+    </div>
+    <div class="tree" id="tree" role="tree"></div>
+    <div class="ctx">
+      <details>
+        <summary id="ctx-sum">Example composition as sent (FLAT JSON)</summary>
+        <pre id="ctx-pre"></pre>
+      </details>
+    </div>
+  </section>
+
+  <footer>Structure from the server's web templates (<code>GET /definition/template/adl1.4/{id}</code>, <code>application/openehr.wt+json</code>). Example values from <code>requests/compositions/*.flat.json</code>. Click a field to see allowed values, its FLAT path and its AQL path.</footer>
+</div>
+<script type="application/json" id="atlas-data">{"generated":"2026-11-26","ehrs":25,"templates":[{"key":"vitals","templateId":"minimal_vital_signs.v0","file":"vital_signs.flat.json","count":32,"blurb":"A nurse records blood pressure, pulse, temperature and weight. Each observation holds one or more timed events."},{"key":"diagnosis","templateId":"minimal_diagnosis.v0","file":"diagnosis.flat.json","count":30,"blurb":"A doctor records one or more diagnoses, each coded in ICD-10, with onset date and severity."},{"key":"medication","templateId":"medication_order","file":"medication_order_lisinopril.flat.json","count":46,"blurb":"A doctor prescribes medication. The medication item is coded in ATC; dose, route, timing and order dates follow."}]}</script>
+<script type="application/json" id="wt-vitals">{"templateId":"minimal_vital_signs.v0","version":"2.3","defaultLanguage":"en","languages":["en"],"tree":{"id":"vital_signs","name":"Vital signs","localizedName":"Vital signs","rmType":"COMPOSITION","nodeId":"openEHR-EHR-COMPOSITION.encounter.v1","min":1,"max":1,"localizedNames":{"en":"Vital signs"},"localizedDescriptions":{"en":"Interaction, contact or care event between a subject of care and healthcare provider(s)."},"children":[{"id":"category","name":"category","localizedName":"category","rmType":"DV_CODED_TEXT","min":1,"max":1,"aqlPath":"/category","inputs":[{"suffix":"code","type":"CODED_TEXT","list":[{"value":"433","label":"event","localizedLabels":{"en":"event"}}],"terminology":"openehr"}],"inContext":true},{"id":"blood_pressure","name":"Blood pressure","localizedName":"Blood pressure","rmType":"OBSERVATION","nodeId":"openEHR-EHR-OBSERVATION.blood_pressure.v2","min":0,"max":1,"localizedNames":{"en":"Blood pressure"},"localizedDescriptions":{"en":"The local measurement of arterial blood pressure."},"aqlPath":"/content[openEHR-EHR-OBSERVATION.blood_pressure.v2]","children":[{"id":"any_event","name":"Any event","localizedName":"Any event","rmType":"EVENT","nodeId":"at0006","min":1,"max":-1,"localizedNames":{"en":"Any event"},"localizedDescriptions":{"en":"Default, unspecified point in time or interval event."},"aqlPath":"/content[openEHR-EHR-OBSERVATION.blood_pressure.v2]/data[at0001]/events[at0006]","children":[{"id":"systolic","name":"Systolic","localizedName":"Systolic","rmType":"DV_QUANTITY","nodeId":"at0004","min":1,"max":1,"localizedNames":{"en":"Systolic"},"localizedDescriptions":{"en":"Peak systemic arterial blood pressure."},"aqlPath":"/content[openEHR-EHR-OBSERVATION.blood_pressure.v2]/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value","inputs":[{"suffix":"magnitude","type":"DECIMAL","validation":{"range":{"min":0.0,"minOp":">=","max":1000.0,"maxOp":"<"}}},{"suffix":"unit","type":"CODED_TEXT","list":[{"value":"mm[Hg]","label":"mm[Hg]","validation":{"range":{"min":0.0,"minOp":">=","max":1000.0,"maxOp":"<"}}}]}]},{"id":"diastolic","name":"Diastolic","localizedName":"Diastolic","rmType":"DV_QUANTITY","nodeId":"at0005","min":1,"max":1,"localizedNames":{"en":"Diastolic"},"localizedDescriptions":{"en":"Minimum systemic arterial blood pressure."},"aqlPath":"/content[openEHR-EHR-OBSERVATION.blood_pressure.v2]/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value","inputs":[{"suffix":"magnitude","type":"DECIMAL","validation":{"range":{"min":0.0,"minOp":">=","max":1000.0,"maxOp":"<"}}},{"suffix":"unit","type":"CODED_TEXT","list":[{"value":"mm[Hg]","label":"mm[Hg]","validation":{"range":{"min":0.0,"minOp":">=","max":1000.0,"maxOp":"<"}}}]}]},{"id":"time","name":"time","rmType":"DV_DATE_TIME","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-OBSERVATION.blood_pressure.v2]/data[at0001]/events[at0006]/time","inputs":[{"type":"DATETIME"}],"inContext":true}]},{"id":"subject","name":"subject","rmType":"PARTY_PROXY","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-OBSERVATION.blood_pressure.v2]/subject","inputs":[{"suffix":"id","type":"TEXT"},{"suffix":"id_scheme","type":"TEXT"},{"suffix":"id_namespace","type":"TEXT"},{"suffix":"name","type":"TEXT"}],"inContext":true},{"id":"language","name":"language","rmType":"CODE_PHRASE","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-OBSERVATION.blood_pressure.v2]/language","inContext":true},{"id":"encoding","name":"encoding","rmType":"CODE_PHRASE","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-OBSERVATION.blood_pressure.v2]/encoding","inContext":true}]},{"id":"pulse_heart_beat","name":"Pulse/Heart beat","localizedName":"Pulse/Heart beat","rmType":"OBSERVATION","nodeId":"openEHR-EHR-OBSERVATION.pulse.v2","min":0,"max":1,"localizedNames":{"en":"Pulse/Heart beat"},"localizedDescriptions":{"en":"The rate and associated attributes for a pulse or heart beat."},"aqlPath":"/content[openEHR-EHR-OBSERVATION.pulse.v2]","children":[{"id":"any_event","name":"Any event","localizedName":"Any event","rmType":"EVENT","nodeId":"at0003","min":1,"max":-1,"localizedNames":{"en":"Any event"},"localizedDescriptions":{"en":"Default, unspecified point in time or interval event."},"aqlPath":"/content[openEHR-EHR-OBSERVATION.pulse.v2]/data[at0002]/events[at0003]","children":[{"id":"rate","name":"Rate","localizedName":"Rate","rmType":"DV_QUANTITY","nodeId":"at0004","min":1,"max":1,"localizedNames":{"en":"Rate"},"localizedDescriptions":{"en":"The rate of the pulse or heart beat, measured in beats per minute."},"aqlPath":"/content[openEHR-EHR-OBSERVATION.pulse.v2]/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value","inputs":[{"suffix":"magnitude","type":"DECIMAL","validation":{"range":{"min":0.0,"minOp":">=","max":1000.0,"maxOp":"<"}}},{"suffix":"unit","type":"CODED_TEXT","list":[{"value":"/min","label":"/min","validation":{"range":{"min":0.0,"minOp":">=","max":1000.0,"maxOp":"<"}}}]}]},{"id":"time","name":"time","rmType":"DV_DATE_TIME","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-OBSERVATION.pulse.v2]/data[at0002]/events[at0003]/time","inputs":[{"type":"DATETIME"}],"inContext":true}]},{"id":"subject","name":"subject","rmType":"PARTY_PROXY","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-OBSERVATION.pulse.v2]/subject","inputs":[{"suffix":"id","type":"TEXT"},{"suffix":"id_scheme","type":"TEXT"},{"suffix":"id_namespace","type":"TEXT"},{"suffix":"name","type":"TEXT"}],"inContext":true},{"id":"language","name":"language","rmType":"CODE_PHRASE","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-OBSERVATION.pulse.v2]/language","inContext":true},{"id":"encoding","name":"encoding","rmType":"CODE_PHRASE","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-OBSERVATION.pulse.v2]/encoding","inContext":true}]},{"id":"body_temperature","name":"Body temperature","localizedName":"Body temperature","rmType":"OBSERVATION","nodeId":"openEHR-EHR-OBSERVATION.body_temperature.v2","min":0,"max":1,"localizedNames":{"en":"Body temperature"},"localizedDescriptions":{"en":"A measurement of the body temperature."},"aqlPath":"/content[openEHR-EHR-OBSERVATION.body_temperature.v2]","children":[{"id":"any_event","name":"Any event","localizedName":"Any event","rmType":"EVENT","nodeId":"at0003","min":1,"max":-1,"localizedNames":{"en":"Any event"},"localizedDescriptions":{"en":"Default, unspecified point in time or interval event."},"aqlPath":"/content[openEHR-EHR-OBSERVATION.body_temperature.v2]/data[at0002]/events[at0003]","children":[{"id":"temperature","name":"Temperature","localizedName":"Temperature","rmType":"DV_QUANTITY","nodeId":"at0004","min":1,"max":1,"localizedNames":{"en":"Temperature"},"localizedDescriptions":{"en":"The measured body temperature."},"aqlPath":"/content[openEHR-EHR-OBSERVATION.body_temperature.v2]/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value","inputs":[{"suffix":"magnitude","type":"DECIMAL","validation":{"range":{"min":0.0,"minOp":">=","max":100.0,"maxOp":"<"}}},{"suffix":"unit","type":"CODED_TEXT","list":[{"value":"Cel","label":"Cel","validation":{"range":{"min":0.0,"minOp":">=","max":100.0,"maxOp":"<"}}}]}]},{"id":"time","name":"time","rmType":"DV_DATE_TIME","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-OBSERVATION.body_temperature.v2]/data[at0002]/events[at0003]/time","inputs":[{"type":"DATETIME"}],"inContext":true}]},{"id":"subject","name":"subject","rmType":"PARTY_PROXY","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-OBSERVATION.body_temperature.v2]/subject","inputs":[{"suffix":"id","type":"TEXT"},{"suffix":"id_scheme","type":"TEXT"},{"suffix":"id_namespace","type":"TEXT"},{"suffix":"name","type":"TEXT"}],"inContext":true},{"id":"language","name":"language","rmType":"CODE_PHRASE","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-OBSERVATION.body_temperature.v2]/language","inContext":true},{"id":"encoding","name":"encoding","rmType":"CODE_PHRASE","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-OBSERVATION.body_temperature.v2]/encoding","inContext":true}]},{"id":"body_weight","name":"Body weight","localizedName":"Body weight","rmType":"OBSERVATION","nodeId":"openEHR-EHR-OBSERVATION.body_weight.v2","min":0,"max":1,"localizedNames":{"en":"Body weight"},"localizedDescriptions":{"en":"Measurement of the body weight of an individual."},"aqlPath":"/content[openEHR-EHR-OBSERVATION.body_weight.v2]","children":[{"id":"any_event","name":"Any event","localizedName":"Any event","rmType":"EVENT","nodeId":"at0003","min":1,"max":-1,"localizedNames":{"en":"Any event"},"localizedDescriptions":{"en":"Default, unspecified point in time or interval event."},"aqlPath":"/content[openEHR-EHR-OBSERVATION.body_weight.v2]/data[at0002]/events[at0003]","children":[{"id":"weight","name":"Weight","localizedName":"Weight","rmType":"DV_QUANTITY","nodeId":"at0004","min":1,"max":1,"localizedNames":{"en":"Weight"},"localizedDescriptions":{"en":"The weight of the individual."},"aqlPath":"/content[openEHR-EHR-OBSERVATION.body_weight.v2]/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value","inputs":[{"suffix":"magnitude","type":"DECIMAL","validation":{"range":{"min":0.0,"minOp":">=","max":1000.0,"maxOp":"<="}}},{"suffix":"unit","type":"CODED_TEXT","list":[{"value":"kg","label":"kg","validation":{"range":{"min":0.0,"minOp":">=","max":1000.0,"maxOp":"<="}}}]}]},{"id":"time","name":"time","rmType":"DV_DATE_TIME","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-OBSERVATION.body_weight.v2]/data[at0002]/events[at0003]/time","inputs":[{"type":"DATETIME"}],"inContext":true}]},{"id":"subject","name":"subject","rmType":"PARTY_PROXY","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-OBSERVATION.body_weight.v2]/subject","inputs":[{"suffix":"id","type":"TEXT"},{"suffix":"id_scheme","type":"TEXT"},{"suffix":"id_namespace","type":"TEXT"},{"suffix":"name","type":"TEXT"}],"inContext":true},{"id":"language","name":"language","rmType":"CODE_PHRASE","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-OBSERVATION.body_weight.v2]/language","inContext":true},{"id":"encoding","name":"encoding","rmType":"CODE_PHRASE","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-OBSERVATION.body_weight.v2]/encoding","inContext":true}]},{"id":"composer","name":"composer","rmType":"PARTY_PROXY","min":1,"max":1,"aqlPath":"/composer","inputs":[{"suffix":"id","type":"TEXT"},{"suffix":"id_scheme","type":"TEXT"},{"suffix":"id_namespace","type":"TEXT"},{"suffix":"name","type":"TEXT"}],"inContext":true},{"id":"language","name":"language","rmType":"CODE_PHRASE","min":1,"max":1,"aqlPath":"/language","inContext":true},{"id":"context","name":"context","rmType":"EVENT_CONTEXT","min":0,"max":1,"aqlPath":"/context","children":[{"id":"start_time","name":"start_time","rmType":"DV_DATE_TIME","min":1,"max":1,"aqlPath":"/context/start_time","inputs":[{"type":"DATETIME"}]},{"id":"setting","name":"setting","rmType":"DV_CODED_TEXT","min":1,"max":1,"aqlPath":"/context/setting","inputs":[{"suffix":"code","type":"TEXT"},{"suffix":"value","type":"TEXT"}]}]},{"id":"territory","name":"territory","rmType":"CODE_PHRASE","min":1,"max":1,"aqlPath":"/territory","inContext":true}]}}</script>
+<script type="application/json" id="ex-vitals">{
+  "ctx/language": "en",
+  "ctx/territory": "LT",
+  "ctx/composer_name": "Nurse Ona Onaitė",
+  "ctx/health_care_facility|name": "Vilnius Clinic",
+  "ctx/time": "2026-11-26T09:45:00",
+  "ctx/setting|code": "228",
+
+  "vital_signs/blood_pressure/any_event:0/time": "2026-11-26T09:45:00",
+  "vital_signs/blood_pressure/any_event:0/systolic|magnitude": 152,
+  "vital_signs/blood_pressure/any_event:0/systolic|unit": "mm[Hg]",
+  "vital_signs/blood_pressure/any_event:0/diastolic|magnitude": 96,
+  "vital_signs/blood_pressure/any_event:0/diastolic|unit": "mm[Hg]",
+
+  "vital_signs/pulse_heart_beat/any_event:0/time": "2026-11-26T09:45:00",
+  "vital_signs/pulse_heart_beat/any_event:0/rate|magnitude": 78,
+  "vital_signs/pulse_heart_beat/any_event:0/rate|unit": "/min",
+
+  "vital_signs/body_temperature/any_event:0/time": "2026-11-26T09:45:00",
+  "vital_signs/body_temperature/any_event:0/temperature|magnitude": 36.7,
+  "vital_signs/body_temperature/any_event:0/temperature|unit": "Cel",
+
+  "vital_signs/body_weight/any_event:0/time": "2026-11-26T09:45:00",
+  "vital_signs/body_weight/any_event:0/weight|magnitude": 84.5,
+  "vital_signs/body_weight/any_event:0/weight|unit": "kg"
+}
+</script>
+<script type="application/json" id="wt-diagnosis">{"templateId":"minimal_diagnosis.v0","version":"2.3","defaultLanguage":"en","languages":["en"],"tree":{"id":"diagnosis","name":"Diagnosis","localizedName":"Diagnosis","rmType":"COMPOSITION","nodeId":"openEHR-EHR-COMPOSITION.encounter.v1","min":1,"max":1,"localizedNames":{"en":"Diagnosis"},"localizedDescriptions":{"en":"Interaction, contact or care event between a subject of care and healthcare provider(s)."},"children":[{"id":"category","name":"category","localizedName":"category","rmType":"DV_CODED_TEXT","min":1,"max":1,"aqlPath":"/category","inputs":[{"suffix":"code","type":"CODED_TEXT","list":[{"value":"433","label":"event","localizedLabels":{"en":"event"}}],"terminology":"openehr"}],"inContext":true},{"id":"problem_diagnosis","name":"Problem/Diagnosis","localizedName":"Problem/Diagnosis","rmType":"EVALUATION","nodeId":"openEHR-EHR-EVALUATION.problem_diagnosis.v1","min":1,"max":-1,"localizedNames":{"en":"Problem/Diagnosis"},"localizedDescriptions":{"en":"Details about a single identified health condition, injury, disability or any other issue which impacts on the physical, mental and/or social well-being of an individual."},"aqlPath":"/content[openEHR-EHR-EVALUATION.problem_diagnosis.v1]","children":[{"id":"problem_diagnosis_name","name":"Problem/Diagnosis name","localizedName":"Problem/Diagnosis name","rmType":"DV_CODED_TEXT","nodeId":"at0002","min":1,"max":1,"localizedNames":{"en":"Problem/Diagnosis name"},"localizedDescriptions":{"en":"Identification of the problem or diagnosis, by name."},"aqlPath":"/content[openEHR-EHR-EVALUATION.problem_diagnosis.v1]/data[at0001]/items[at0002]/value","inputs":[{"suffix":"code","type":"TEXT","terminology":"ICD10"},{"suffix":"value","type":"TEXT","terminology":"ICD10"}]},{"id":"clinical_description","name":"Clinical description","localizedName":"Clinical description","rmType":"DV_TEXT","nodeId":"at0009","min":0,"max":1,"localizedNames":{"en":"Clinical description"},"localizedDescriptions":{"en":"Narrative description about the problem or diagnosis."},"aqlPath":"/content[openEHR-EHR-EVALUATION.problem_diagnosis.v1]/data[at0001]/items[at0009]/value","inputs":[{"type":"TEXT"}]},{"id":"date_time_of_onset","name":"Date/time of onset","localizedName":"Date/time of onset","rmType":"DV_DATE_TIME","nodeId":"at0077","min":0,"max":1,"localizedNames":{"en":"Date/time of onset"},"localizedDescriptions":{"en":"Estimated or actual date/time that signs or symptoms of the problem/diagnosis were first observed."},"aqlPath":"/content[openEHR-EHR-EVALUATION.problem_diagnosis.v1]/data[at0001]/items[at0077]/value","inputs":[{"type":"DATETIME"}]},{"id":"severity","name":"Severity","localizedName":"Severity","rmType":"DV_CODED_TEXT","nodeId":"at0005","min":0,"max":1,"localizedNames":{"en":"Severity"},"localizedDescriptions":{"en":"An assessment of the overall severity of the problem or diagnosis."},"aqlPath":"/content[openEHR-EHR-EVALUATION.problem_diagnosis.v1]/data[at0001]/items[at0005]/value","inputs":[{"suffix":"code","type":"CODED_TEXT","list":[{"value":"at0047","label":"Mild","localizedLabels":{"en":"Mild"},"localizedDescriptions":{"en":"The problem or diagnosis does not interfere with normal activity."}},{"value":"at0048","label":"Moderate","localizedLabels":{"en":"Moderate"},"localizedDescriptions":{"en":"The problem or diagnosis causes some restriction of normal activity."}},{"value":"at0049","label":"Severe","localizedLabels":{"en":"Severe"},"localizedDescriptions":{"en":"The problem or diagnosis causes total restriction of normal activity."}}],"terminology":"local"}]},{"id":"subject","name":"subject","rmType":"PARTY_PROXY","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-EVALUATION.problem_diagnosis.v1]/subject","inputs":[{"suffix":"id","type":"TEXT"},{"suffix":"id_scheme","type":"TEXT"},{"suffix":"id_namespace","type":"TEXT"},{"suffix":"name","type":"TEXT"}],"inContext":true},{"id":"language","name":"language","rmType":"CODE_PHRASE","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-EVALUATION.problem_diagnosis.v1]/language","inContext":true},{"id":"encoding","name":"encoding","rmType":"CODE_PHRASE","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-EVALUATION.problem_diagnosis.v1]/encoding","inContext":true}]},{"id":"composer","name":"composer","rmType":"PARTY_PROXY","min":1,"max":1,"aqlPath":"/composer","inputs":[{"suffix":"id","type":"TEXT"},{"suffix":"id_scheme","type":"TEXT"},{"suffix":"id_namespace","type":"TEXT"},{"suffix":"name","type":"TEXT"}],"inContext":true},{"id":"language","name":"language","rmType":"CODE_PHRASE","min":1,"max":1,"aqlPath":"/language","inContext":true},{"id":"context","name":"context","rmType":"EVENT_CONTEXT","min":0,"max":1,"aqlPath":"/context","children":[{"id":"start_time","name":"start_time","rmType":"DV_DATE_TIME","min":1,"max":1,"aqlPath":"/context/start_time","inputs":[{"type":"DATETIME"}]},{"id":"setting","name":"setting","rmType":"DV_CODED_TEXT","min":1,"max":1,"aqlPath":"/context/setting","inputs":[{"suffix":"code","type":"TEXT"},{"suffix":"value","type":"TEXT"}]}]},{"id":"territory","name":"territory","rmType":"CODE_PHRASE","min":1,"max":1,"aqlPath":"/territory","inContext":true}]}}</script>
+<script type="application/json" id="ex-diagnosis">{
+  "ctx/language": "en",
+  "ctx/territory": "LT",
+  "ctx/composer_name": "Dr. Jonas Jonaitis",
+  "ctx/health_care_facility|name": "Vilnius Clinic",
+  "ctx/time": "2026-11-26T10:00:00",
+  "ctx/setting|code": "228",
+
+  "diagnosis/problem_diagnosis:0/problem_diagnosis_name|code": "I10",
+  "diagnosis/problem_diagnosis:0/problem_diagnosis_name|value": "Essential (primary) hypertension",
+  "diagnosis/problem_diagnosis:0/problem_diagnosis_name|terminology": "ICD10",
+  "diagnosis/problem_diagnosis:0/date_time_of_onset": "2025-03-01T00:00:00",
+  "diagnosis/problem_diagnosis:0/severity|code": "at0048",
+  "diagnosis/problem_diagnosis:0/clinical_description": "Repeated office BP above 150/95 mmHg.",
+
+  "diagnosis/problem_diagnosis:1/problem_diagnosis_name|code": "E11.9",
+  "diagnosis/problem_diagnosis:1/problem_diagnosis_name|value": "Type 2 diabetes mellitus without complications",
+  "diagnosis/problem_diagnosis:1/problem_diagnosis_name|terminology": "ICD10"
+}
+</script>
+<script type="application/json" id="wt-medication">{"templateId":"medication_order","version":"2.3","defaultLanguage":"en","languages":["en"],"tree":{"id":"medication_order","name":"medication_order","localizedName":"medication_order","rmType":"COMPOSITION","nodeId":"openEHR-EHR-COMPOSITION.encounter.v1","min":1,"max":1,"localizedNames":{"en":"medication_order"},"localizedDescriptions":{"en":"Interaction, contact or care event between a subject of care and healthcare provider(s)."},"children":[{"id":"category","name":"category","localizedName":"category","rmType":"DV_CODED_TEXT","min":1,"max":1,"aqlPath":"/category","inputs":[{"suffix":"code","type":"CODED_TEXT","list":[{"value":"433","label":"event","localizedLabels":{"en":"event"}}],"terminology":"openehr"}],"inContext":true},{"id":"context","name":"context","localizedName":"context","rmType":"EVENT_CONTEXT","min":1,"max":1,"aqlPath":"/context","children":[{"id":"start_time","name":"start_time","rmType":"DV_DATE_TIME","min":1,"max":1,"aqlPath":"/context/start_time","inputs":[{"type":"DATETIME"}],"inContext":true},{"id":"setting","name":"setting","rmType":"DV_CODED_TEXT","min":1,"max":1,"aqlPath":"/context/setting","inputs":[{"suffix":"code","type":"TEXT"},{"suffix":"value","type":"TEXT"}],"inContext":true}]},{"id":"medication_order","name":"Medication order","localizedName":"Medication order","rmType":"INSTRUCTION","nodeId":"openEHR-EHR-INSTRUCTION.medication_order.v3","min":0,"max":1,"localizedNames":{"en":"Medication order"},"localizedDescriptions":{"en":"An order for a medication, vaccine, nutritional product or other therapeutic item for an identified individual."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]","children":[{"id":"order","name":"Order","localizedName":"Order","rmType":"ACTIVITY","nodeId":"at0001","min":0,"max":-1,"localizedNames":{"en":"Order"},"localizedDescriptions":{"en":"Details of the requested order."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]","children":[{"id":"medication_item","name":"Medication item","localizedName":"Medication item","rmType":"DV_CODED_TEXT","nodeId":"at0070","min":1,"max":1,"localizedNames":{"en":"Medication item"},"localizedDescriptions":{"en":"Name of the medication, vaccine or other therapeutic/prescribable item being ordered."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0070]/value","inputs":[{"suffix":"code","type":"TEXT","terminology":"ATC"},{"suffix":"value","type":"TEXT","terminology":"ATC"}],"annotations":{"comment":"Depending on the prescribing context this field could be used for either generic- or product-based prescribing. This data field can be used to record tightly bound orders of different medications when they are prescribed as a single pack. It is strongly recommended that the 'Medication item' be coded with a terminology capable of triggering decision support, where possible. The extent of coding may vary from the simple name of the medication item through to structured details about the actual medication pack to be used. Free text entry should only be used if there is no appropriate terminology available."}},{"id":"medication","name":"Medication","localizedName":"Medication","rmType":"CLUSTER","nodeId":"openEHR-EHR-CLUSTER.medication.v1","min":0,"max":1,"localizedNames":{"en":"Medication"},"localizedDescriptions":{"en":"Details about a medication or component of a medication, including strength, form and details of any specific constituents."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[openEHR-EHR-CLUSTER.medication.v1]","children":[{"id":"name","name":"Name","localizedName":"Name","rmType":"DV_TEXT","nodeId":"at0132","min":0,"max":1,"localizedNames":{"en":"Name"},"localizedDescriptions":{"en":"The name of the medication or medication component."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[openEHR-EHR-CLUSTER.medication.v1]/items[at0132]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"For example: 'Zinacef 750 mg powder' or 'cefuroxim'. This item should be coded if possible, using for example, RxNorm, DM+D, Australian Medicines Terminology or FEST. Usage of this element will vary according to context of use. This element may be omitted where the name of the medication is recorded in the parent INSTRUCTION or ACTION archetype, and this archetype is only used to record that the form must be or was 'liquid'."}},{"id":"form","name":"Form","localizedName":"Form","rmType":"DV_TEXT","nodeId":"at0071","min":0,"max":-1,"localizedNames":{"en":"Form"},"localizedDescriptions":{"en":"The formulation or presentation of the medication or medication component."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[openEHR-EHR-CLUSTER.medication.v1]/items[at0071]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"For example: 'tablet', 'capsule', 'cream', 'infusion fluid' or 'inhalation powder'. Coding of the form with a terminology is preferred, where possible. Medicines catalogues may differentiate between administrable form 'solution for injection' and product form 'powder for solution for injection'. The recorded form will depend on the exact context of use but administrable form is likely to be used in most instances."}},{"id":"category","name":"Category","localizedName":"Category","rmType":"DV_CODED_TEXT","min":0,"max":1,"localizedNames":{"en":"Category"},"localizedDescriptions":{"en":"The category of the medication or medication component, with regard to manufacturing or preparation, and the number of ingredients."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[openEHR-EHR-CLUSTER.medication.v1]/items[at0142]/value","inputs":[{"suffix":"code","type":"CODED_TEXT","list":[{"value":"at0143","label":"Ad-hoc mixture","localizedLabels":{"en":"Ad-hoc mixture"},"localizedDescriptions":{"en":"The medication or medication component is composed of a mixture of ingredients specified within the order. These are typically prepared by pharmacy or ward personnel to suit individual patients."}},{"value":"at0146","label":"Ingredient","localizedLabels":{"en":"Ingredient"},"localizedDescriptions":{"en":"The medication or medication component is an individual ingredient of the medication. This term is used when the archetype is nested within a parent instance of itself, to describe the individual ingredients of a medication."}},{"value":"at0144","label":"Multi-ingredient product","localizedLabels":{"en":"Multi-ingredient product"},"localizedDescriptions":{"en":"The medication or medication component consists of a number of active ingredients which are pre-combined into a single form such as a tablet, cream or powder by the manufacturer, for example Paracetamol/codeine."}},{"value":"at0145","label":"Single-ingredient product","localizedLabels":{"en":"Single-ingredient product"},"localizedDescriptions":{"en":"The medication or medication component is a manufactured product containing a single active ingredient."}},{"value":"at0001","label":"Combination product","localizedLabels":{"en":"Combination product"},"localizedDescriptions":{"en":"The medication or medication component consists of a number of separate products which are pre-packaged by the manufacturer, for example Canesten Combi."}}],"listOpen":true,"terminology":"local"},{"suffix":"other","type":"TEXT"}],"annotations":{"comment":"For example: 'Paracetamol/codeine' is a Multi-ingredient product, while 'Morphine 60 mg + Haloperidol 2 mg + Midazolam 5 mg' is an Ad-hoc mixture, whose composition is fully specified within the order."}},{"id":"strength_presentation","name":"Strength (presentation)","localizedName":"Strength (presentation)","rmType":"CLUSTER","nodeId":"at0152","min":0,"max":1,"localizedNames":{"en":"Strength (presentation)"},"localizedDescriptions":{"en":"The strength of the medication or medication component, expressed as a ratio."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[openEHR-EHR-CLUSTER.medication.v1]/items[at0152]","children":[{"id":"strength_numerator","name":"Strength numerator","localizedName":"Strength numerator","rmType":"DV_QUANTITY","nodeId":"at0153","min":1,"max":1,"localizedNames":{"en":"Strength numerator"},"localizedDescriptions":{"en":"The value of the numerator of the strength fraction."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[openEHR-EHR-CLUSTER.medication.v1]/items[at0152]/items[at0153]/value","inputs":[{"suffix":"magnitude","type":"DECIMAL","validation":{"range":{"min":0.0,"minOp":">="}}},{"suffix":"unit","type":"CODED_TEXT","list":[{"value":"1","label":"1","validation":{"range":{"min":0.0,"minOp":">="}}}]}],"annotations":{"comment":"For example: For a presentation strength of '300 µg/0.3 ml', the strength numerator value is '300'. For a presentation strength of '100 mg/tablet', the strength numerator value is '100'."}},{"id":"strength_numerator_unit","name":"Strength numerator unit","localizedName":"Strength numerator unit","rmType":"DV_TEXT","nodeId":"at0004","min":1,"max":1,"localizedNames":{"en":"Strength numerator unit"},"localizedDescriptions":{"en":"The unit of the numerator of the strength fraction."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[openEHR-EHR-CLUSTER.medication.v1]/items[at0152]/items[at0004]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"The strength numerator is usually recorded using mass, volume or arbitrary units. For example: 'mg', 'ml', 'IU'. For a presentation strength of '300 µg/0.3 ml', the strength numerator unit is 'µg'. For a presentation strength of '100 mg/tablet', the strength numerator value is 'mg'."}},{"id":"strength_denominator","name":"Strength denominator","localizedName":"Strength denominator","rmType":"DV_QUANTITY","nodeId":"at0157","min":1,"max":1,"localizedNames":{"en":"Strength denominator"},"localizedDescriptions":{"en":"The value of the denominator of the strength fraction."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[openEHR-EHR-CLUSTER.medication.v1]/items[at0152]/items[at0157]/value","inputs":[{"suffix":"magnitude","type":"DECIMAL","validation":{"range":{"min":0.0,"minOp":">="}}},{"suffix":"unit","type":"CODED_TEXT","list":[{"value":"1","label":"1","validation":{"range":{"min":0.0,"minOp":">="}}}]}],"annotations":{"comment":"For example: For a presentation strength of '300 µg/0.3 ml', the strength denominator value is '0.3'. For a presentation strength of '100 mg/tablet', the strength denominator value is '1'."}},{"id":"strength_denominator_unit","name":"Strength denominator unit","localizedName":"Strength denominator unit","rmType":"DV_TEXT","nodeId":"at0005","min":1,"max":1,"localizedNames":{"en":"Strength denominator unit"},"localizedDescriptions":{"en":"The unit of the denominator of the strength fraction."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[openEHR-EHR-CLUSTER.medication.v1]/items[at0152]/items[at0005]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"The strength denominator is usually recorded using mass or volume units. For example: 'g', 'ml'. For a presentation strength of '300 µg/0.3 ml', the strength denominator unit is 'ml'. For a presentation strength of '100 mg/tablet', the strength denominator unit is '1'. For this example, the 'Unit of presentation' element is used to record the presentation unit of the medication, 'tablet'."}}],"annotations":{"comment":"In some cases, as for liquid or semisolid medications, the denominator of the strength ratio is a physical quantity, for example 2 mg/5 ml. In some of these cases the denominator also reflects the actual volume of the component: 5 ml in the previous example. In this case the 'Strength (concentration)' would be 0.4 mg/ml. In other cases, where the strength involves a denominator which is not a physical quantity, for example 4 mg/tablet, the denominator is expressed as a unitary value '1' with a unit of '1', and 'tablet' is carried in the 'Unit of presentation' element. This arrangement was chosen to align with the approach adopted by the ISO IDMP standard for medication catalogues."},"cardinalities":[{"min":4,"max":-1,"ids":["strength_numerator","strength_numerator_unit","strength_denominator","strength_denominator_unit"]}]},{"id":"unit_of_presentation","name":"Unit of presentation","localizedName":"Unit of presentation","rmType":"DV_TEXT","nodeId":"at0158","min":0,"max":1,"localizedNames":{"en":"Unit of presentation"},"localizedDescriptions":{"en":"The unit of presentation for a single dose of the medication, for use with the 'Strength denominator unit' element."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[openEHR-EHR-CLUSTER.medication.v1]/items[at0158]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"For example: 'tablet', 'capsule', 'puff', 'inhalation'. In most cases, like for tablets and capsules, the unit of presentation is identical to the Form. For some presentations such as inhalers, the Form may be 'inhalation powder', 'inhalation aerosol' or 'inhaler' while the unit of presentation is 'inhalation', 'puff', or 'dose'."}},{"id":"strength_concentration","name":"Strength (concentration)","localizedName":"Strength (concentration)","rmType":"DV_QUANTITY","nodeId":"at0115","min":0,"max":1,"localizedNames":{"en":"Strength (concentration)"},"localizedDescriptions":{"en":"The strength of the medication or medication component, as a concentration."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[openEHR-EHR-CLUSTER.medication.v1]/items[at0115]/value","inputs":[{"suffix":"magnitude","type":"DECIMAL"},{"suffix":"unit","type":"CODED_TEXT"}],"annotations":{"comment":"This element is used for liquid or semisolid medications, or medications intended to be diluted in a liquid before administration. For example: '10 mg/ml', '20 mg/g', '5 %', '10,000 SQ-U/ml'."}},{"id":"amount","name":"Amount","localizedName":"Amount","rmType":"DV_QUANTITY","nodeId":"at0139","min":0,"max":1,"localizedNames":{"en":"Amount"},"localizedDescriptions":{"en":"The value of the amount of medication or medication component."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[openEHR-EHR-CLUSTER.medication.v1]/items[at0139]/value","inputs":[{"suffix":"magnitude","type":"DECIMAL","validation":{"range":{"min":0.0,"minOp":">="}}},{"suffix":"unit","type":"CODED_TEXT","list":[{"value":"1","label":"1","validation":{"range":{"min":0.0,"minOp":">="}}}]}],"annotations":{"comment":"For example: '1', '1.5', '1000'. \r\nNote: the associated unit for this amount is recorded using the 'Amount unit' element."}},{"id":"amount_unit","name":"Amount unit","localizedName":"Amount unit","rmType":"DV_TEXT","nodeId":"at0008","min":0,"max":1,"localizedNames":{"en":"Amount unit"},"localizedDescriptions":{"en":"The unit of the amount of medication or medication component."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[openEHR-EHR-CLUSTER.medication.v1]/items[at0008]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"For example: 'mg', 'ml', 'IU'.\r\nNote: The value of the amount is recorded using the 'Amount' element."}},{"id":"alternate_amount","name":"Alternate amount","localizedName":"Alternate amount","rmType":"DV_QUANTITY","nodeId":"at0148","min":0,"max":1,"localizedNames":{"en":"Alternate amount"},"localizedDescriptions":{"en":"The value of an equivalent representation of the amount of the medication or medication component."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[openEHR-EHR-CLUSTER.medication.v1]/items[at0148]/value","inputs":[{"suffix":"magnitude","type":"DECIMAL","validation":{"range":{"min":0.0,"minOp":">="}}},{"suffix":"unit","type":"CODED_TEXT","list":[{"value":"1","label":"1","validation":{"range":{"min":0.0,"minOp":">="}}}]}],"annotations":{"comment":"The unit of the alternate amount is recorded in the 'Alternate amount unit' element. For example: for a medication with a strength of '5 mg/ml' and where the Amount is '1 ml', the equivalent amount would be 5 mg and the value recorded in this data element would be '5'."}},{"id":"alternate_amount_unit","name":"Alternate amount unit","localizedName":"Alternate amount unit","rmType":"DV_TEXT","nodeId":"at0007","min":0,"max":1,"localizedNames":{"en":"Alternate amount unit"},"localizedDescriptions":{"en":"The unit of an equivalent representation of the amount of the medication or medication component."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[openEHR-EHR-CLUSTER.medication.v1]/items[at0007]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"The value of the alternate amount is recorded in the 'Alternate amount' element. For example: for a medication with a strength of '5 mg/ml' and where the Amount is '1 ml', the equivalent amount would be 5 mg and the value recorded in this data element would be 'mg'."}},{"id":"description","name":"Description","localizedName":"Description","rmType":"DV_TEXT","nodeId":"at0133","min":0,"max":1,"localizedNames":{"en":"Description"},"localizedDescriptions":{"en":"Narrative description of the medication or medication component where it is not possible to describe this fully using structured elements."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[openEHR-EHR-CLUSTER.medication.v1]/items[at0133]/value","inputs":[{"type":"TEXT"}]}]},{"id":"route","name":"Route","localizedName":"Route","rmType":"DV_TEXT","nodeId":"at0091","min":0,"max":-1,"localizedNames":{"en":"Route"},"localizedDescriptions":{"en":"The route by which the ordered item is to be administered into the subject's body."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0091]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"For example: 'oral', 'intravenous', or 'topical'.\r\nCoding of the route with a terminology is preferred, where possible. Multiple potential routes may be specified."}},{"id":"body_site","name":"Body site","localizedName":"Body site","rmType":"DV_TEXT","nodeId":"at0092","min":0,"max":1,"localizedNames":{"en":"Body site"},"localizedDescriptions":{"en":"Name of the site of administration of the ordered item."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0092]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"For example: 'left upper arm', 'intravenous catheter right hand'.\r\n Coding of the body site with a terminology is preferred, where possible."}},{"id":"administration_method","name":"Administration method","localizedName":"Administration method","rmType":"DV_TEXT","nodeId":"at0094","min":0,"max":-1,"localizedNames":{"en":"Administration method"},"localizedDescriptions":{"en":"The technique or device by which the ordered item is to be administered."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0094]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"For example: ' via Z-track injection'; 'via nebuliser'. Coding of the method with a terminology is preferred, where possible."}},{"id":"overall_directions_description","name":"Overall directions description","localizedName":"Overall directions description","rmType":"DV_TEXT","nodeId":"at0009","min":0,"max":1,"localizedNames":{"en":"Overall directions description"},"localizedDescriptions":{"en":"Complete narrative description about how the ordered item is to be used."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0009]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"This narrative should normally subsume data captured in 'Dose amount', 'Dose timing' and any additional instructions for use. Where the medication dose directions are fully carried by the structured, computable dose directions, this element should carry the narrative equivalent, generally auto-generated. If it is not possible to represent the intended 'Dose direction' fully in computable form, partial representation is not recommended, and the directions should be only recorded in narrative form using this data element."}},{"id":"parsable_directions","name":"Parsable directions","localizedName":"Parsable directions","rmType":"DV_PARSABLE","nodeId":"at0047","min":0,"max":1,"localizedNames":{"en":"Parsable directions"},"localizedDescriptions":{"en":"A parsable, computable text representation of the directions."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0047]/value","inputs":[{"suffix":"value","type":"TEXT"},{"suffix":"formalism","type":"TEXT"}],"annotations":{"comment":"Generally this is only used when passing information between legacy systems. For example: '10mg bd; 20mg n' as used by the NHS Dose syntax (in development)."}},{"id":"specific_directions_description","name":"Specific directions description","localizedName":"Specific directions description","rmType":"DV_TEXT","nodeId":"at0173","min":0,"max":-1,"localizedNames":{"en":"Specific directions description"},"localizedDescriptions":{"en":"A narrative description of a specific part of overall directions."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0173]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"In some settings, it is common to split overall narrative directions into more specific segments of narrative. For example in hospital settings, it can be common to split the overall directions into 'Dose amount' and 'Dose timing', both as narrative text. These terms can be applied at template or run-time."}},{"id":"dosage_justification","name":"Dosage justification","localizedName":"Dosage justification","rmType":"DV_TEXT","nodeId":"at0174","min":0,"max":-1,"localizedNames":{"en":"Dosage justification"},"localizedDescriptions":{"en":"A description of the justification used to calculate a dose amount or administration rate where this is dependent on some other factor."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0174]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"For example: 'Adjusted for amputation'."}},{"id":"clinical_indication","name":"Clinical indication","localizedName":"Clinical indication","rmType":"DV_TEXT","nodeId":"at0018","min":0,"max":-1,"localizedNames":{"en":"Clinical indication"},"localizedDescriptions":{"en":"The clinical reason for use of the ordered item."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0018]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"For example: 'Angina'. Coding of the clinical indication with a terminology is preferred, where possible. This data element allows multiple occurrences. It is not intended to carry an indication for administrative authorisation purposes."}},{"id":"therapeutic_intent","name":"Therapeutic intent","localizedName":"Therapeutic intent","rmType":"DV_TEXT","nodeId":"at0148","min":0,"max":-1,"localizedNames":{"en":"Therapeutic intent"},"localizedDescriptions":{"en":"The overall therapeutic intent of the ordered item."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0148]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"For example: 'pain relief'; 'palliative care'; 'low-dose prophylaxis'; 'rehydration'; 'nutritional infusion'."}},{"id":"clinician_guidance","name":"Clinician guidance","localizedName":"Clinician guidance","rmType":"DV_TEXT","nodeId":"at0179","min":0,"max":1,"localizedNames":{"en":"Clinician guidance"},"localizedDescriptions":{"en":"Advice to future prescribers/dispensers about the ongoing, long term order."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0179]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"For example: 'don't allow brand substitution' or advice regarding using a specific brand to avoid fillers that cause reactions."}},{"id":"order_details","name":"Order details","localizedName":"Order details","rmType":"CLUSTER","nodeId":"at0113","min":0,"max":1,"localizedNames":{"en":"Order details"},"localizedDescriptions":{"en":"Details about the whole medication order."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0113]","children":[{"id":"order_start_date_time","name":"Order start date/time","localizedName":"Order start date/time","rmType":"DV_DATE_TIME","nodeId":"at0012","min":0,"max":1,"localizedNames":{"en":"Order start date/time"},"localizedDescriptions":{"en":"The date and optional time to commence use of the ordered item."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0113]/items[at0012]/value","inputs":[{"type":"DATETIME"}]},{"id":"order_stop_date_time","name":"Order stop date/time","localizedName":"Order stop date/time","rmType":"DV_DATE_TIME","nodeId":"at0013","min":0,"max":1,"localizedNames":{"en":"Order stop date/time"},"localizedDescriptions":{"en":"The date and optional time when it is planned to cease use of the ordered item."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0113]/items[at0013]/value","inputs":[{"type":"DATETIME"}]},{"id":"order_start_criterion","name":"Order start criterion","localizedName":"Order start criterion","rmType":"DV_TEXT","nodeId":"at0011","min":0,"max":-1,"localizedNames":{"en":"Order start criterion"},"localizedDescriptions":{"en":"A condition which, when met, requires the commencement of administration or use."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0113]/items[at0011]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"For example: 'Start if symptoms recur'. This is intended for a general pre-condition which should trigger the whole medication course to be started, and not for 'as required' administrations of an ongoing order."}},{"id":"order_stop_criterion","name":"Order stop criterion","localizedName":"Order stop criterion","rmType":"DV_TEXT","nodeId":"at0016","min":0,"max":-1,"localizedNames":{"en":"Order stop criterion"},"localizedDescriptions":{"en":"A condition which, when met, requires the cessation of administration or use."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0113]/items[at0016]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"For example: 'Stop after symptoms disappear''."}},{"id":"administrations_completed","name":"Administrations completed","localizedName":"Administrations completed","rmType":"DV_COUNT","nodeId":"at0060","min":0,"max":1,"localizedNames":{"en":"Administrations completed"},"localizedDescriptions":{"en":"The number of administrations of the ordered item that have been completed, as part of the intended whole order but prior to the issuance of this order."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0113]/items[at0060]/value","inputs":[{"type":"INTEGER","validation":{"range":{"min":0,"minOp":">="}}}],"annotations":{"comment":"For example: To record that the patient has taken the two first antibiotic tablets of a three day course, prior to discharge from the hospital to a nursing home."}},{"id":"duration_of_order_completed","name":"Duration of order completed","localizedName":"Duration of order completed","rmType":"DV_DURATION","nodeId":"at0050","min":0,"max":1,"localizedNames":{"en":"Duration of order completed"},"localizedDescriptions":{"en":"The time period during which the individual/patient has already been using the ordered item as a part of the intended whole order but prior to the issuance of this order."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0113]/items[at0050]/value","inputs":[{"suffix":"day","type":"INTEGER","validation":{"range":{"min":0,"minOp":">="}}},{"suffix":"week","type":"INTEGER","validation":{"range":{"min":0,"minOp":">="}}},{"suffix":"hour","type":"INTEGER","validation":{"range":{"min":0,"minOp":">="}}}],"annotations":{"comment":"For example: To record that the patient had been taking antibiotics 3 days prior to hospital admission, in the context of a 7 day course."}}]},{"id":"dispense_directions","name":"Dispense directions","localizedName":"Dispense directions","rmType":"CLUSTER","nodeId":"at0129","min":0,"max":1,"localizedNames":{"en":"Dispense directions"},"localizedDescriptions":{"en":"Directions about the dispensing of the ordered item."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0129]","children":[{"id":"dispense_instruction","name":"Dispense instruction","localizedName":"Dispense instruction","rmType":"DV_TEXT","nodeId":"at0106","min":0,"max":-1,"localizedNames":{"en":"Dispense instruction"},"localizedDescriptions":{"en":"An additional instruction directed primarily at the person dispensing the ordered item."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0129]/items[at0106]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"Example: Detailed instructions for phased dispensing of opiates."}},{"id":"substitution_direction","name":"Substitution direction","localizedName":"Substitution direction","rmType":"DV_CODED_TEXT","nodeId":"at0132","min":0,"max":1,"localizedNames":{"en":"Substitution direction"},"localizedDescriptions":{"en":"Permission for substitution with a bioequivalent item."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0129]/items[at0132]/value","inputs":[{"suffix":"code","type":"CODED_TEXT","list":[{"value":"at0168","label":"Permitted","localizedLabels":{"en":"Permitted"},"localizedDescriptions":{"en":"Substitution of the medication with a bioequivalent medication is allowed."}},{"value":"at0169","label":"Not permitted","localizedLabels":{"en":"Not permitted"},"localizedDescriptions":{"en":"Substitution of the medication with a bioequivalent medication is not allowed."}}],"terminology":"local"}],"annotations":{"comment":"In many jurisdictions, substitution of an ordered item as a generic form or with a different brand name, which has been determined as bioequivalent, is allowed at the point of dispense or supply. In other cases substitution is assumed and the clinician has to explicitly request non-substitution."}},{"id":"non-substitution_reason","name":"Non-substitution reason","localizedName":"Non-substitution reason","rmType":"DV_TEXT","nodeId":"at0154","min":0,"max":1,"localizedNames":{"en":"Non-substitution reason"},"localizedDescriptions":{"en":"The reason why an ordered item should not be substituted at dispense."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0129]/items[at0154]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"For example 'Generic preparation not bio-equivalent'."}},{"id":"priority","name":"Priority","localizedName":"Priority","rmType":"DV_TEXT","nodeId":"at0139","min":0,"max":1,"localizedNames":{"en":"Priority"},"localizedDescriptions":{"en":"An indicator of the urgency with which the ordered item should be dispensed."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0129]/items[at0139]/value","inputs":[{"type":"TEXT"}],"annotations":{"comment":"For example 'Urgent'. This is left to be templated or specialised according to local valuesets. Some jurisdictions allow instructions to dispense to be marked as 'urgent' so that the dispensary handles them quickly."}},{"id":"dispensing_start_date","name":"Dispensing start date","localizedName":"Dispensing start date","rmType":"DV_DATE_TIME","nodeId":"at0155","min":0,"max":1,"localizedNames":{"en":"Dispensing start date"},"localizedDescriptions":{"en":"The date from which the ordered item is permitted to be dispensed for the first time."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0129]/items[at0155]/value","inputs":[{"type":"DATETIME"}],"annotations":{"comment":"May be used to control the time of dispensing of medications with potential for abuse. For example: benzodiazepines or analgesics."}},{"id":"dispensing_expiry_date","name":"Dispensing expiry date","localizedName":"Dispensing expiry date","rmType":"DV_DATE_TIME","nodeId":"at0161","min":0,"max":1,"localizedNames":{"en":"Dispensing expiry date"},"localizedDescriptions":{"en":"The date after which the ordered item is no longer valid to be legally dispensed."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0129]/items[at0161]/value","inputs":[{"type":"DATETIME"}],"annotations":{"comment":"In some jurisdictions, orders to dispense may have an expiry date after which the prescription may not be dispensed."}}]},{"id":"comment","name":"Comment","localizedName":"Comment","rmType":"DV_TEXT","nodeId":"at0167","min":0,"max":1,"localizedNames":{"en":"Comment"},"localizedDescriptions":{"en":"Additional narrative about the medication order not captured in other fields."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/description[at0002]/items[at0167]/value","inputs":[{"type":"TEXT"}]},{"id":"timing","name":"timing","rmType":"DV_PARSABLE","min":0,"max":1,"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/timing","inputs":[{"suffix":"value","type":"TEXT"},{"suffix":"formalism","type":"TEXT"}],"inContext":true},{"id":"action_archetype_id","name":"action_archetype_id","rmType":"STRING","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/activities[at0001]/action_archetype_id","inputs":[{"type":"TEXT"}],"inContext":true}]},{"id":"order_identifier","name":"Order identifier","localizedName":"Order identifier","rmType":"DV_IDENTIFIER","nodeId":"at0004","min":0,"max":-1,"localizedNames":{"en":"Order identifier"},"localizedDescriptions":{"en":"Unique identifier for the medication order."},"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/protocol[at0005]/items[at0004]/value","inputs":[{"suffix":"id","type":"TEXT"},{"suffix":"type","type":"TEXT"},{"suffix":"issuer","type":"TEXT"},{"suffix":"assigner","type":"TEXT"}],"annotations":{"comment":"This data element allows for multiple occurrences to be defined more explicitly at run-time, if required."}},{"id":"subject","name":"subject","rmType":"PARTY_PROXY","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/subject","inputs":[{"suffix":"id","type":"TEXT"},{"suffix":"id_scheme","type":"TEXT"},{"suffix":"id_namespace","type":"TEXT"},{"suffix":"name","type":"TEXT"}],"inContext":true},{"id":"narrative","name":"narrative","rmType":"DV_TEXT","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/narrative","inputs":[{"type":"TEXT"}],"inContext":true},{"id":"language","name":"language","rmType":"CODE_PHRASE","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/language","inContext":true},{"id":"encoding","name":"encoding","rmType":"CODE_PHRASE","min":1,"max":1,"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/encoding","inContext":true},{"id":"expiry_time","name":"expiry_time","rmType":"DV_DATE_TIME","min":0,"max":1,"aqlPath":"/content[openEHR-EHR-INSTRUCTION.medication_order.v3]/expiry_time","inputs":[{"type":"DATETIME"}]}]},{"id":"composer","name":"composer","rmType":"PARTY_PROXY","min":1,"max":1,"aqlPath":"/composer","inputs":[{"suffix":"id","type":"TEXT"},{"suffix":"id_scheme","type":"TEXT"},{"suffix":"id_namespace","type":"TEXT"},{"suffix":"name","type":"TEXT"}],"inContext":true},{"id":"language","name":"language","rmType":"CODE_PHRASE","min":1,"max":1,"aqlPath":"/language","inContext":true},{"id":"territory","name":"territory","rmType":"CODE_PHRASE","min":1,"max":1,"aqlPath":"/territory","inContext":true}]}}</script>
+<script type="application/json" id="ex-medication">{
+  "ctx/language": "en",
+  "ctx/territory": "LT",
+  "ctx/composer_name": "Dr. Jonas Jonaitis",
+  "ctx/health_care_facility|name": "Vilnius Clinic",
+  "ctx/time": "2026-11-26T10:10:00",
+  "ctx/setting|code": "228",
+
+  "medication_order/medication_order/order:0/medication_item|value": "Lisinopril 10 mg tablet",
+  "medication_order/medication_order/order:0/medication_item|code": "C09AA03",
+  "medication_order/medication_order/order:0/medication_item|terminology": "ATC",
+  "medication_order/medication_order/order:0/medication/form:0": "Tablet",
+  "medication_order/medication_order/order:0/medication/strength_concentration|magnitude": 10,
+  "medication_order/medication_order/order:0/medication/strength_concentration|unit": "mg",
+  "medication_order/medication_order/order:0/route:0": "Oral",
+  "medication_order/medication_order/order:0/overall_directions_description": "1 tablet once daily in the morning",
+  "medication_order/medication_order/order:0/clinical_indication:0": "Essential hypertension",
+  "medication_order/medication_order/order:0/order_details/order_start_date_time": "2026-11-26T00:00:00",
+  "medication_order/medication_order/order:0/timing": "R/2026-11-27T08:00:00/P1D",
+  "medication_order/medication_order/order:0/timing|formalism": "timing",
+  "medication_order/medication_order/narrative": "Lisinopril 10 mg orally once daily"
+}
+</script>
+<script>
+(function () {
+  const J = id => JSON.parse(document.getElementById(id).textContent);
+  // Data embedded by scripts/template-atlas.sh: atlas-data (counts, config), wt-<key> (web template), ex-<key> (FLAT example)
+  const D = J('atlas-data');
+  const T = D.templates.map(t => ({ ...t, wt: J('wt-' + t.key), ex: J('ex-' + t.key) }));
+  document.getElementById('ehr-count').textContent = D.ehrs + (D.ehrs === 1 ? ' EHR' : ' EHRs');
+  document.getElementById('asof').textContent =
+    `Counts from AQL on the local server, ${D.generated}. One EHR can hold compositions of any template.`;
+  const TYPES = { DV_QUANTITY: 'Quantity', DV_CODED_TEXT: 'Coded text', DV_TEXT: 'Text', DV_DATE_TIME: 'Date/time', DV_DATE: 'Date',
+    DV_COUNT: 'Count', DV_DURATION: 'Duration', DV_PARSABLE: 'Parsable text', DV_IDENTIFIER: 'Identifier', DV_BOOLEAN: 'Yes/no',
+    CLUSTER: 'Group', EVENT: 'Event', POINT_EVENT: 'Event', OBSERVATION: 'Observation', EVALUATION: 'Evaluation', INSTRUCTION: 'Instruction',
+    ACTION: 'Action', ACTIVITY: 'Activity', COMPOSITION: 'Composition', EVENT_CONTEXT: 'Context', PARTY_PROXY: 'Party',
+    CODE_PHRASE: 'Code', STRING: 'String', SECTION: 'Section', ADMIN_ENTRY: 'Admin entry' };
+  const ENTRY = ['OBSERVATION', 'EVALUATION', 'INSTRUCTION', 'ACTION', 'ADMIN_ENTRY'];
+  const TECH = new Set(['category', 'context', 'start_time', 'setting', 'subject', 'language', 'encoding', 'composer', 'territory', 'expiry_time', 'action_archetype_id']);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // Index example FLAT values by index-free path
+  function indexExample(ex) {
+    const m = {};
+    for (const [k, v] of Object.entries(ex)) {
+      if (k.startsWith('ctx/')) continue;
+      const [p, suffix] = k.split('|');
+      const inst = (p.match(/:(\d+)/g) || []).join('');
+      const key = p.replace(/:\d+/g, '');
+      ((m[key] ||= {})[inst] ||= {})[suffix || ''] = v;
+    }
+    return m;
+  }
+  function exampleText(node, rec) {
+    if (!rec) return null;
+    return Object.values(rec).map(r => {
+      if ('magnitude' in r) return r.magnitude + (r.unit ? ' ' + r.unit : '');
+      if ('value' in r && 'code' in r) return r.value + ' · ' + r.code;
+      if ('code' in r) {
+        const lbl = (node.inputs || []).flatMap(i => i.list || []).find(o => o.value === r.code);
+        return lbl ? lbl.label : r.code;
+      }
+      return r[''] !== undefined ? r[''] : Object.values(r)[0];
+    }).join('  |  ');
+  }
+
+  // Prepare nodes: paths, technical flag, usage
+  function prep(t) {
+    const exIdx = indexExample(t.ex);
+    const stats = { fields: 0, required: 0, used: 0 };
+    (function walk(n, path, flat, depth, techParent) {
+      n._path = path; n._flat = flat;
+      n._ex = exampleText(n, exIdx[path]);
+      n._tech = !n._ex && (techParent || !!n.inContext || (depth > 0 && TECH.has(n.id) && !ENTRY.includes(n.rmType)));
+      n._leaf = !n.children || !n.children.length;
+      let used = !!n._ex;
+      (n.children || []).forEach(c => {
+        const rep = c.max !== 1 ? ':0' : '';
+        walk(c, path + '/' + c.id, flat + '/' + c.id + rep, depth + 1, n._tech);
+        if (c._used) used = true;
+      });
+      n._used = used;
+      if (n._leaf && !n._tech) { stats.fields++; if (n.min >= 1) stats.required++; if (n._ex) stats.used++; }
+    })(t.wt.tree, t.wt.tree.id, t.wt.tree.id, 0, false);
+    t.stats = stats;
+  }
+  T.forEach(prep);
+
+  function card(n) {
+    if (n.min >= 1 && n.max === 1) return ['required', 'req'];
+    if (n.min === 0 && n.max === 1) return ['optional', ''];
+    if (n.max === -1) return [n.min === 0 ? '0 or more' : n.min + ' or more', 'many'];
+    return [n.min + '..' + n.max, 'many'];
+  }
+  function entries(t) {
+    const out = [];
+    (function f(n) { (n.children || []).forEach(c => { if (ENTRY.includes(c.rmType)) out.push(c); else if (c.rmType === 'SECTION') f(c); }); })(t.wt.tree);
+    return out;
+  }
+
+  // Overview cards
+  const br = document.getElementById('branches');
+  T.forEach((t, i) => {
+    const b = document.createElement('button');
+    b.className = 'tcard';
+    b.innerHTML = `<span class="eyebrow">Template</span><h3>${esc(t.wt.tree.name)}</h3>
+      <span class="tid">${esc(t.wt.templateId)}</span>
+      <span class="count">${t.count}<small>compositions</small></span>
+      <div class="chips">${entries(t).map(e => `<span class="chip k-${e.rmType}"><i>${TYPES[e.rmType]}</i>${esc(e.name)}${e.max !== 1 ? ' ×n' : ''}</span>`).join('')}</div>
+      <span class="meta">${t.stats.fields} data fields · ${t.stats.required} required</span>`;
+    b.addEventListener('click', () => { select(i); document.getElementById('explorer').scrollIntoView({ behavior: 'smooth' }); });
+    br.appendChild(b);
+  });
+
+  // Tabs
+  const tabs = document.getElementById('tabs');
+  T.forEach((t, i) => {
+    const b = document.createElement('button');
+    b.className = 'tab'; b.role = 'tab'; b.id = 'tab-' + t.key;
+    b.textContent = t.wt.tree.name;
+    b.addEventListener('click', () => select(i));
+    tabs.appendChild(b);
+  });
+
+  const optTech = document.getElementById('opt-tech'), optUsed = document.getElementById('opt-used');
+  let cur = 0;
+  optTech.addEventListener('change', render); optUsed.addEventListener('change', render);
+
+  function inputsHtml(n) {
+    const rows = [];
+    for (const inp of n.inputs || []) {
+      const what = inp.suffix ? `<code>|${esc(inp.suffix)}</code> ` : '';
+      let detail = esc((inp.type || '').toLowerCase());
+      if (inp.list && inp.list.length) {
+        detail = `<div class="vals">${inp.list.slice(0, 30).map(o => `<span>${esc(o.label)}${o.label !== o.value ? ` <code>${esc(o.value)}</code>` : ''}</span>`).join('')}</div>`;
+      }
+      if (inp.terminology && !(inp.list && inp.list.length)) detail += ` · codes from <b>${esc(inp.terminology)}</b>`;
+      const r = inp.validation && inp.validation.range;
+      if (r) detail += ` · range ${r.min ?? '…'} – ${r.max ?? '…'}`;
+      rows.push(`<dt>${what || 'value'}</dt><dd>${detail}</dd>`);
+    }
+    return rows.join('');
+  }
+  function cardHtml(n) {
+    const desc = n.localizedDescriptions && n.localizedDescriptions.en;
+    const sufs = (n.inputs || []).map(i => i.suffix).filter(Boolean);
+    const flat = n._flat + (n._leaf && sufs.length ? '|' + sufs[0] : '');
+    return `<div class="card">
+      ${desc ? `<p>${esc(desc)}</p>` : ''}
+      <dl>
+        <dt>Data type</dt><dd>${esc(TYPES[n.rmType] || n.rmType)} <code>${esc(n.rmType)}</code></dd>
+        ${n.nodeId && n.nodeId.startsWith('openEHR') ? `<dt>Archetype</dt><dd><code>${esc(n.nodeId)}</code></dd>` : ''}
+        ${inputsHtml(n)}
+        ${n._ex ? `<dt>Example</dt><dd><span class="ex" style="white-space:normal">${esc(n._ex)}</span></dd>` : ''}
+        <dt>FLAT path</dt><dd class="path"><code>${esc(flat)}</code><button class="copy" data-copy="${esc(flat)}">Copy</button></dd>
+        ${n.aqlPath ? `<dt>AQL path</dt><dd class="path"><code>${esc(n.aqlPath)}</code><button class="copy" data-copy="${esc(n.aqlPath)}">Copy</button></dd>` : ''}
+      </dl></div>`;
+  }
+
+  function nodeEl(n, depth) {
+    if (n._tech && !optTech.checked) return null;
+    if (optUsed.checked && !n._used) return null;
+    const el = document.createElement('div');
+    const container = !n._leaf;
+    el.className = 'node' + (container ? ' container' : '') + (n._tech ? ' tech' : '');
+    const [ctext, ccls] = card(n);
+    const kind = ENTRY.includes(n.rmType) || ['CLUSTER', 'EVENT', 'ACTIVITY', 'COMPOSITION'].includes(n.rmType) ? `k-${n.rmType}` : '';
+    const row = document.createElement('div');
+    row.className = 'row'; row.setAttribute('role', 'treeitem');
+    row.innerHTML = `${container ? '<button class="caret" aria-label="Collapse or expand">▾</button>' : '<span class="caret" aria-hidden="true">·</span>'}
+      <button class="label">${kind ? `<span class="dot ${kind}"></span>` : ''}<span class="nm">${esc(n.name)}</span>
+        <span class="type">${esc(TYPES[n.rmType] || n.rmType)}</span>
+        ${n._ex && n._leaf ? `<span class="ex" title="${esc(n._ex)}">${esc(n._ex)}</span>` : ''}</button>
+      ${depth ? `<span class="pill ${ccls}">${ctext}</span>` : ''}`;
+    el.appendChild(row);
+    let cardEl = null;
+    row.querySelector('.label').addEventListener('click', showCard);
+    if (container) {
+      const kids = document.createElement('div');
+      kids.className = 'kids'; kids.setAttribute('role', 'group');
+      n.children.forEach(c => { const k = nodeEl(c, depth + 1); if (k) kids.appendChild(k); });
+      el.appendChild(kids);
+      row.setAttribute('aria-expanded', 'true');
+      row.querySelector('.caret').addEventListener('click', () => {
+        el.classList.toggle('closed');
+        row.setAttribute('aria-expanded', String(!el.classList.contains('closed')));
+      });
+    }
+    function showCard() {
+      if (cardEl) { cardEl.remove(); cardEl = null; return; }
+      const tmp = document.createElement('div'); tmp.innerHTML = cardHtml(n); cardEl = tmp.firstElementChild;
+      row.after(cardEl);
+    }
+    return el;
+  }
+
+  function render() {
+    const t = T[cur];
+    document.getElementById('tdesc').textContent = t.blurb;
+    const s = t.stats;
+    document.getElementById('summary').innerHTML =
+      `<span><b>${s.fields}</b> data fields</span><span><b>${s.required}</b> required</span><span><b>${s.used}</b> filled in example</span>`;
+    const tree = document.getElementById('tree'); tree.innerHTML = '';
+    const root = nodeEl(t.wt.tree, 0); if (root) tree.appendChild(root);
+    document.getElementById('ctx-sum').textContent = `Example composition as sent: requests/compositions/${t.file}`;
+    document.getElementById('ctx-pre').innerHTML = Object.entries(t.ex).map(([k, v]) =>
+      `<span class="k">${esc(JSON.stringify(k))}</span>: <span class="v">${esc(JSON.stringify(v))}</span>`).join('\n');
+  }
+  function select(i) {
+    cur = i;
+    [...tabs.children].forEach((b, j) => b.setAttribute('aria-selected', String(j === i)));
+    render();
+  }
+
+  document.addEventListener('click', e => {
+    const b = e.target.closest('.copy'); if (!b) return;
+    e.stopPropagation();
+    const txt = b.dataset.copy;
+    const done = () => { b.textContent = 'Copied'; setTimeout(() => (b.textContent = 'Copy'), 1200); };
+    try {
+      navigator.clipboard.writeText(txt).then(done, () => selectText(b));
+    } catch (_) { selectText(b); }
+  });
+  function selectText(b) {
+    const code = b.previousElementSibling; const r = document.createRange(); r.selectNodeContents(code);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  }
+
+  select(0);
+})();
+</script>
+</body></html>

@@ -42,6 +42,18 @@ checks versions, runs AQL queries and prints response times. Results: `docs/medi
     & "C:\Program Files\Git\bin\bash.exe" scripts/medication-scenario.sh 10     # PowerShell
 
 On Windows it needs Git Bash (part of Git for Windows); plain `bash` in PowerShell starts WSL instead.
+
+## Template atlas
+
+`docs/template-atlas.html` is a self-contained, interactive view of the templates: composition counts per template,
+the field tree with required / optional / repeating fields, allowed values and units, FLAT and AQL paths, and values
+from the sample compositions in `requests/compositions/`. Open it in a browser. Regenerate it against the running
+stack after changing templates, sample compositions or data:
+
+    scripts/template-atlas.sh                                                   # Git Bash
+    & "C:\Program Files\Git\bin\bash.exe" scripts/template-atlas.sh             # PowerShell
+
+The page layout and rendering live in `scripts/template-atlas/`; the list of templates is at the top of the script.
 To use Git Bash in the IntelliJ terminal: Settings > Tools > Terminal > Shell path = `C:\Program Files\Git\bin\bash.exe`.
 
 ## Java / Maven project: test data generator
@@ -89,7 +101,8 @@ entity class and register it in `CompositionFactories`.
     requests/                                   IntelliJ HTTP client requests + sample FLAT compositions
     postman/                                    Postman collection / newman
     scripts/medication-scenario.sh              curl-based scenario with versions, AQL and timings
-    docs/                                       curl examples, scenario results
+    scripts/template-atlas.sh, template-atlas/  generator for docs/template-atlas.html
+    docs/                                       curl examples, scenario results, template atlas
 
 ## API request examples
 
