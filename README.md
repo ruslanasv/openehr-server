@@ -44,6 +44,19 @@ checks versions, runs AQL queries and prints response times. Results: `docs/medi
 On Windows it needs Git Bash (part of Git for Windows); plain `bash` in PowerShell starts WSL instead.
 To use Git Bash in the IntelliJ terminal: Settings > Tools > Terminal > Shell path = `C:\Program Files\Git\bin\bash.exe`.
 
+## Test data generator (first version)
+
+`scripts/DataGenerator.java` creates N EHRs with M random compositions each (diagnoses from an ICD-10 list,
+vital signs with realistic distributions, medication orders from an ATC list), times within the last year.
+Single-file Java (JDK 17+, no build, no dependencies); works from PowerShell and Git Bash, run from the repo root:
+
+    java scripts/DataGenerator.java --ehrs 100 --compositions 5 --threads 8 --seed 42
+    java scripts/DataGenerator.java --help
+
+Patients get subject ids `GEN-<run>-0001…` in namespace `generated` (separate from hand-made test data);
+the same `--seed` produces the same data. Prints throughput and latency per operation.
+New templates: add a generator method and an entry in `TEMPLATE_FILES`.
+
 ## API request examples
 
 - Postman collection + environment: `postman/` (see `postman/README.md`, also runnable with newman via Docker)
